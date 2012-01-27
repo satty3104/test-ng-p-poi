@@ -49,4 +49,6 @@ public interface SSFDataProviderFactory {
 	 */
 	public Iterator<Object[]> create(String filePath, String fileName,
 			String sheetName);
+
+	public Iterator<Object[]> changeSheet(String sheetName);
 }

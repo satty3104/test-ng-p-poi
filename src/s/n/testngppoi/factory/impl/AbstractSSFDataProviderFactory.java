@@ -7,9 +7,10 @@ import java.net.URL;
 import java.util.Iterator;
 
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 
+import s.n.testngppoi.dataprovider.SSFDataProvider;
 import s.n.testngppoi.factory.SSFDataProviderFactory;
-import s.n.testngppoi.iterator.SSFDataProvider;
 import s.n.testngppoi.reader.WorkbookReader;
 import s.n.testngppoi.util.FileUtil;
 
@@ -74,10 +75,18 @@ public abstract class AbstractSSFDataProviderFactory implements SSFDataProviderF
 	}
 
 	private Sheet getSheet(File file, String sheetName) {
-		Sheet sheet = new WorkbookReader().read(file).getSheet(sheetName);
+		Sheet sheet = getWorkbook(file).getSheet(sheetName);
 		if (sheet == null) {
 			fail("The sheet [" + sheetName + "] cannot be found.");
 		}
 		return sheet;
 	}
+
+	private Workbook getWorkbook(File file) {
+		return new WorkbookReader().read(file);
+	}
+
+	public Iterator<Object[]> changeSheet(String sheetName) {
+		return null;
+	};
 }
