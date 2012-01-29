@@ -1,27 +1,48 @@
 package s.n.testngppoi.dataprovider.delegate;
 
-import static org.testng.Assert.fail;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+
+import s.n.testngppoi.exception.TestNgpPoiException;
 
 public class SSFDataProviderDelegate {
 
 	private int rowNum;
 
-	public Map<String, Object> getMap(Row row, Row header, int rowNum) {
-		if (row == null) {
+	private Row header;
 
+	private int maxColumn;
+
+	public SSFDataProviderDelegate(Sheet sheet) {
+		header = sheet.getRow(getRowNum());
+		if (header == null) {
+			// ヘッダ行がない場合は失敗にする
+			throw new TestNgpPoiException(
+					"There is no header row in the sheet ["
+							+ sheet.getSheetName() + "].");
 		}
-		this.rowNum = rowNum;
-		int maxColumn = header.getLastCellNum();
+		maxColumn = header.getLastCellNum();
+		addRowNum();
+	}
+
+	public void addRowNum() {
+		rowNum++;
+	}
+
+	public int getRowNum() {
+		return rowNum;
+	}
+
+	public Map<String, Object> getMap(Row row) {
 		if (row.getLastCellNum() > maxColumn) {
-			// カラムが多すぎる場合は失敗にしないがログには出しておく
-			System.out.println("There are too many columns in test No." + row.getRowNum() + ".");
+			// TODO カラムが多すぎる場合は失敗にしないがログには出しておく
+			System.out.println("There are too many columns in test No."
+					+ row.getRowNum() + ".");
 		}
 		Map<String, Object> map = new HashMap<String, Object>();
 		for (int i = 0; i < maxColumn; i++) {
@@ -32,7 +53,7 @@ public class SSFDataProviderDelegate {
 	}
 
 	private String processHeaderCell(Cell headerCell) {
-		if (rowNum == 1) {
+		if (getRowNum() == 1) {
 			// 初回はヘッダのチェックもする
 			checkHeaderCell(headerCell);
 		}
@@ -42,18 +63,21 @@ public class SSFDataProviderDelegate {
 	private void checkHeaderCell(Cell headerCell) {
 		if (headerCell == null) {
 			// ヘッダが未入力の場合は失敗
-			fail("The cell with no value is found in the header row.");
+			throw new TestNgpPoiException(
+					"The cell with no value is found in the header row.");
 		}
 		if (headerCell.getCellType() != Cell.CELL_TYPE_STRING) {
 			// ヘッダのデータ型が文字列でない場合は失敗
-			fail("Header row's cell must be String type.");
+			throw new TestNgpPoiException(
+					"Header row's cell must be String type.");
 		}
 	}
 
 	private void processCell(Map<String, Object> map, String key, Cell cell) {
 		if (map.containsKey(key)) {
-			// キーが重複していたらログには出しておく
-			System.out.println("Key in header cell is duplicated. [" + key + "]");
+			// TODO キーが重複していたらログには出しておく
+			System.out.println("Key in header cell is duplicated. [" + key
+					+ "]");
 		}
 		map.put(key, getValue(cell));
 	}
@@ -63,18 +87,19 @@ public class SSFDataProviderDelegate {
 			return processNull();
 		}
 		switch (cell.getCellType()) {
-			case Cell.CELL_TYPE_BLANK:
-				return processBlank(cell);
-			case Cell.CELL_TYPE_STRING:
-				return processString(cell);
-			case Cell.CELL_TYPE_NUMERIC:
-				return processNumeric(cell);
-			case Cell.CELL_TYPE_BOOLEAN:
-				return processBoolean(cell);
-			default:
-				System.out.println("There are invalid cell type in test No." + rowNum + ", so it replaced to null. "
-						+ "Cell type must be string, numeric, date or boolean.");
-				return null;
+		case Cell.CELL_TYPE_BLANK:
+			return processBlank(cell);
+		case Cell.CELL_TYPE_STRING:
+			return processString(cell);
+		case Cell.CELL_TYPE_NUMERIC:
+			return processNumeric(cell);
+		case Cell.CELL_TYPE_BOOLEAN:
+			return processBoolean(cell);
+		default:
+			System.out.println("There are invalid cell type in test No."
+					+ getRowNum() + ", so it replaced to null. "
+					+ "Cell type must be string, numeric, date or boolean.");
+			return null;
 		}
 	}
 

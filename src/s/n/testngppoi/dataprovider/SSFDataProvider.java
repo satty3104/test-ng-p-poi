@@ -1,7 +1,5 @@
 package s.n.testngppoi.dataprovider;
 
-import static org.testng.Assert.fail;
-
 import java.util.Iterator;
 
 import org.apache.poi.ss.usermodel.Row;
@@ -11,62 +9,48 @@ import s.n.testngppoi.dataprovider.delegate.SSFDataProviderDelegate;
 
 public class SSFDataProvider implements Iterator<Object[]> {
 
-	private Sheet sheet;
-
-	private Row header;
-
-	private int rowNum;
-
 	private SSFDataProviderDelegate delegate;
+
+	private Sheet sheet;
 
 	public SSFDataProvider(Sheet sheet) {
 		if (sheet == null) {
 			throw new NullPointerException("");
 		}
-		delegate = new SSFDataProviderDelegate();
 		this.sheet = sheet;
-		init();
-	}
-
-	private void init() {
-		header = sheet.getRow(rowNum);
-		if (header == null) {
-			// ヘッダ行がない場合は失敗にする
-			fail("There is no header row in the sheet [" + sheet.getSheetName() + "].");
-		}
-
-		rowNum++;
-		if (sheet.getRow(rowNum) == null) {
-			// ヘッダ行しかない場合は成功にするがログには出しておく
-			System.out.println("There is no test in the sheet [" + sheet.getSheetName() + "].");
-		}
+		delegate = new SSFDataProviderDelegate(sheet);
 	}
 
 	@Override
 	public boolean hasNext() {
-		Row row = sheet.getRow(rowNum);
-		if (row != null) {
+		int rowNum = delegate.getRowNum();
+		if (sheet.getRow(rowNum) != null) {
 			return true;
+		}
+		if (rowNum == 1) {
+			// ヘッダ行しかなかった場合は成功にするがログには出しておく
+			System.out.println("There is no test in the sheet ["
+					+ sheet.getSheetName() + "].");
 		}
 		if (rowNum != sheet.getLastRowNum() + 1) {
 			// 行数がおかしい（空行があるなどの）場合は成功にするがログには出しておく
-			System.out.println("The number of tests run is not the same as the number of rows in the sheet ["
-					+ sheet.getSheetName() + "].");
+			System.out
+					.println("The number of tests run is not the same as the number of rows in the sheet ["
+							+ sheet.getSheetName() + "].");
 		}
 		return false;
 	}
 
 	@Override
 	public Object[] next() {
-		Object[] ret = processRow(sheet.getRow(rowNum));
-
+		Object[] ret = processRow(sheet.getRow(delegate.getRowNum()));
 		// rowNumを加算するのは戻り値を返す直前にしないと、ログの数字がおかしくなる
-		rowNum++;
+		delegate.addRowNum();
 		return ret;
 	}
 
 	private Object[] processRow(Row row) {
-		return new Object[] { delegate.getMap(row, header, rowNum) };
+		return new Object[] { delegate.getMap(row) };
 	}
 
 	@Override
