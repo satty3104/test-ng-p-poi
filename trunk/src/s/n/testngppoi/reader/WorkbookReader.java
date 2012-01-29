@@ -1,7 +1,5 @@
 package s.n.testngppoi.reader;
 
-import static org.testng.Assert.fail;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,40 +11,42 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
+import s.n.testngppoi.exception.TestNgpPoiException;
 import s.n.testngppoi.util.FileUtil;
 
 public class WorkbookReader {
 
-	public Workbook read(File file) {
-		if (FileUtil.isValidFile(file) == false) {
-			// throw new ;
+	public Workbook read(final File file) {
+		if (FileUtil.isInvalid(file)) {
+			throw new TestNgpPoiException("The file [" + file.getAbsolutePath()
+					+ "] is invalid.");
 		}
 		InputStream is = null;
-		Workbook wb = null;
 		try {
 			// POI3.8からはFileを直接渡せるらしい。。。
-			wb = WorkbookFactory.create((is = new FileInputStream(file)));
-		} catch (FileNotFoundException e) {
-			fail("The file [" + file.getAbsolutePath() + "] is not exists or is not a file.");
-		} catch (InvalidFormatException e) {
-			e.printStackTrace();
-			fail("The file [" + file.getAbsolutePath() + "]'s format is invalid.");
-		} catch (IOException e) {
-			e.printStackTrace();
-			fail("I/O error occured. The file is [" + file.getAbsolutePath() + "].");
+			return WorkbookFactory.create((is = new FileInputStream(file)));
+		} catch (final FileNotFoundException e) {
+			throw new TestNgpPoiException("The file [" + file.getAbsolutePath()
+					+ "] is not exists or is not a file.", e);
+		} catch (final InvalidFormatException e) {
+			throw new TestNgpPoiException("The file [" + file.getAbsolutePath()
+					+ "]'s format is invalid.", e);
+		} catch (final IOException e) {
+			throw new TestNgpPoiException("I/O error occured. The file is ["
+					+ file.getAbsolutePath() + "].", e);
 		} finally {
 			close(is);
 		}
-		return wb;
 	}
 
-	private void close(Closeable c) {
+	private void close(final Closeable c) {
 		if (c == null) {
 			return;
 		}
 		try {
 			c.close();
-		} catch (IOException e) {
+		} catch (final IOException e) {
+			// TODO
 			System.out.println("Failed to close stream.");
 		}
 	}
