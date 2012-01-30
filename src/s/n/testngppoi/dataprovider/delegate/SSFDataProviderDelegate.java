@@ -1,5 +1,6 @@
 package s.n.testngppoi.dataprovider.delegate;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,6 +21,23 @@ public class SSFDataProviderDelegate {
 	public SSFDataProviderDelegate(Row header) {
 		this.header = header;
 		maxColumn = header.getLastCellNum();
+		checkHeaderCell();
+	}
+
+	private void checkHeaderCell() {
+		for (int i = 0; i < maxColumn; i++) {
+			Cell headerCell = header.getCell(i);
+			if (headerCell == null) {
+				// ヘッダが未入力の場合は失敗
+				throw new TestNgpPoiException(
+						"The cell with no value is found in the header row.");
+			}
+			if (headerCell.getCellType() != Cell.CELL_TYPE_STRING) {
+				// ヘッダのデータ型が文字列でない場合は失敗
+				throw new TestNgpPoiException(
+						"Header row's cell must be String type.");
+			}
+		}
 	}
 
 	public void addRowNum() {
@@ -38,40 +56,53 @@ public class SSFDataProviderDelegate {
 		}
 		Map<String, Object> map = new HashMap<String, Object>();
 		for (int i = 0; i < maxColumn; i++) {
-			String key = processHeaderCell(header.getCell(i));
-			processCell(map, key, row.getCell(i));
+			processCell(map, header.getCell(i), row.getCell(i));
 		}
 		return map;
 	}
 
-	private String processHeaderCell(Cell headerCell) {
-		if (getRowNum() == 1) {
-			// 初回はヘッダのチェックもする
-			checkHeaderCell(headerCell);
+	private void processCell(Map<String, Object> map, Cell headerCell, Cell cell) {
+		String headerValue = headerCell.getRichStringCellValue().getString();
+		String[] headerElements = headerValue.split(":", -1);
+		if (headerElements.length > 2) {
+			throw new TestNgpPoiException("");
 		}
-		return headerCell.getRichStringCellValue().getString();
-	}
+		if (headerElements.length == 1) {
+			String key = headerElements[0];
+			if (map.containsKey(key)) {
+				// TODO キーが重複していたらログには出しておく
+				System.out.println("Key in header cell is duplicated. [" + key
+						+ "]");
+			}
+			map.put(key, getValue(cell));
+			return;
+		}
 
-	private void checkHeaderCell(Cell headerCell) {
-		if (headerCell == null) {
-			// ヘッダが未入力の場合は失敗
-			throw new TestNgpPoiException(
-					"The cell with no value is found in the header row.");
-		}
-		if (headerCell.getCellType() != Cell.CELL_TYPE_STRING) {
-			// ヘッダのデータ型が文字列でない場合は失敗
-			throw new TestNgpPoiException(
-					"Header row's cell must be String type.");
-		}
-	}
+		String className = headerElements[0];
+		String valiableName = headerElements[1];
 
-	private void processCell(Map<String, Object> map, String key, Cell cell) {
-		if (map.containsKey(key)) {
-			// TODO キーが重複していたらログには出しておく
-			System.out.println("Key in header cell is duplicated. [" + key
-					+ "]");
+		String[] valiableNameElements = valiableName.split(".", -1);
+
+		Object o = null;
+		try {
+			o = Class.forName(className).newInstance();
+		} catch (ClassNotFoundException e) {
+			// TODO
+		} catch (InstantiationException e) {
+			// TODO
+		} catch (IllegalAccessException e) {
+			// TODO
 		}
-		map.put(key, getValue(cell));
+
+		Field f = null;
+		try {
+			f = o.getClass().getDeclaredField(valiableName);
+			f.setAccessible(true);
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+		} catch (NoSuchFieldException e) {
+			// TODO Auto-generated catch block
+		}
 	}
 
 	protected Object getValue(Cell cell) {
@@ -111,7 +142,8 @@ public class SSFDataProviderDelegate {
 		if ("\"\"".equals(cellValue)) {
 			return "";
 		}
-		return cell.getRichStringCellValue().getString();
+		return cell.getRichStringCellValue().getString()
+				.replaceAll("\\[TAB\\]", "\t");
 	}
 
 	protected Object processNumeric(Cell cell) {
