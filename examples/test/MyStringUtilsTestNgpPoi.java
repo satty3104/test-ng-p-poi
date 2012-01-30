@@ -32,6 +32,5 @@ public class MyStringUtilsTestNgpPoi extends ExcelTestNgSupport {
 
 	@Test(dataProviderClass = MyStringUtilsTestNgpPoiData.class, dataProvider = "test")
 	public void test(Map<String, Object> map) {
-		System.out.println(Double.valueOf(1.3).intValue());
 	}
 }
