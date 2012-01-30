@@ -6,28 +6,20 @@ import java.util.Map;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
 
 import s.n.testngppoi.exception.TestNgpPoiException;
 
 public class SSFDataProviderDelegate {
 
-	private int rowNum;
+	private int rowNum = 1;
 
 	private Row header;
 
 	private int maxColumn;
 
-	public SSFDataProviderDelegate(Sheet sheet) {
-		header = sheet.getRow(getRowNum());
-		if (header == null) {
-			// ヘッダ行がない場合は失敗にする
-			throw new TestNgpPoiException(
-					"There is no header row in the sheet ["
-							+ sheet.getSheetName() + "].");
-		}
+	public SSFDataProviderDelegate(Row header) {
+		this.header = header;
 		maxColumn = header.getLastCellNum();
-		addRowNum();
 	}
 
 	public void addRowNum() {
