@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 
 import s.n.testngppoi.dataprovider.delegate.SSFDataProviderDelegate;
+import s.n.testngppoi.exception.TestNgpPoiException;
 
 public class SSFDataProvider implements Iterator<Object[]> {
 
@@ -18,7 +19,14 @@ public class SSFDataProvider implements Iterator<Object[]> {
 			throw new NullPointerException("");
 		}
 		this.sheet = sheet;
-		delegate = new SSFDataProviderDelegate(sheet);
+		Row header = sheet.getRow(0);
+		if (header == null) {
+			// ヘッダ行がない場合は失敗にする
+			throw new TestNgpPoiException(
+					"There is no header row in the sheet ["
+							+ sheet.getSheetName() + "].");
+		}
+		delegate = new SSFDataProviderDelegate(header);
 	}
 
 	@Override
