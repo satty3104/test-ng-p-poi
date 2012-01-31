@@ -16,19 +16,23 @@ public abstract class ExcelTestNgSupport {
 	}
 
 	public String getString(String key) {
-		return castObject(map.get(key));
+		return castObject(get(key));
 	}
 
 	public int getInt(String key) {
-		Double d = castObject(map.get(key));
+		Double d = castObject(get(key));
 		return d.intValue();
 	}
 
 	public double getDouble(String key) {
-		return castObject(map.get(key));
+		return castObject(get(key));
 	}
 
 	public boolean getBoolean(String key) {
-		return castObject(map.get(key));
+		return castObject(get(key));
+	}
+
+	public Object get(String key) {
+		return map.get(key);
 	}
 }
