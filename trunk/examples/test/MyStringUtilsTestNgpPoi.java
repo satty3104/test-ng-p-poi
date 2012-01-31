@@ -32,5 +32,13 @@ public class MyStringUtilsTestNgpPoi extends ExcelTestNgSupport {
 
 	@Test(dataProviderClass = MyStringUtilsTestNgpPoiData.class, dataProvider = "test")
 	public void test(Map<String, Object> map) {
+		initMethod(map);
+		// String str1 = getString("str1");
+		// String delim = getString("delim");
+		// String str2 = getString("str2");
+		// String expect = getString("expect");
+		// assertEquals(target.concat(str1, delim, str2), expect);
+
+		System.out.println(get("moge"));
 	}
 }

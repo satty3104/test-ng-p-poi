@@ -20,6 +20,6 @@ public class MyStringUtilsTestNgpPoiData {
 	public static Iterator<Object[]> test() {
 		SSFDataProviderFactory factory = new SSFDataProviderFactoryCreator(
 				Type.XSSF).getFactory();
-		return factory.create();
+		return factory.create("objTest");
 	}
 }

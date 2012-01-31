@@ -81,27 +81,62 @@ public class SSFDataProviderDelegate {
 		String className = headerElements[0];
 		String valiableName = headerElements[1];
 
-		String[] valiableNameElements = valiableName.split(".", -1);
-
-		Object o = null;
-		try {
-			o = Class.forName(className).newInstance();
-		} catch (ClassNotFoundException e) {
-			// TODO
-		} catch (InstantiationException e) {
-			// TODO
-		} catch (IllegalAccessException e) {
-			// TODO
+		String[] valiableNameElement = valiableName.split(".", -1);
+		if (valiableNameElement.length == 0) {
+			throw new TestNgpPoiException("");
 		}
-
-		Field f = null;
+		if (valiableNameElement.length == 1) {
+			Class c = null;
+			Object o = null;
+			if (getValue(cell) != null) {
+				try {
+					c = Class.forName(className);
+					// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
+					// TODO 引数ありコンストラクタの場合？
+					o = c.newInstance();
+				} catch (ClassNotFoundException e) {
+					// TODO
+					e.printStackTrace();
+				} catch (InstantiationException e) {
+					// TODO
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					// TODO
+					e.printStackTrace();
+				}
+			}
+			map.put(valiableName, o);
+			return;
+		}
+		String s = valiableNameElement[0];
+		Object o2 = map.get(s);
+		if (o2 == null) {
+			return;
+		}
 		try {
-			f = o.getClass().getDeclaredField(valiableName);
-			f.setAccessible(true);
+			int len = valiableNameElement.length;
+			for (int i = 1; i < len; i++) {
+				Field f = o2.getClass()
+						.getDeclaredField(valiableNameElement[i]);
+				f.setAccessible(true);
+				if (i == len - 1) {
+					f.set(o2, getValue(cell));
+				} else {
+					o2 = f.get(o2);
+				}
+			}
 		} catch (SecurityException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
 		} catch (NoSuchFieldException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
