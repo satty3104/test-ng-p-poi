@@ -7,7 +7,10 @@ public class Hoge {
 	Fuga fuga;
 
 	public String toString() {
-		return str1 + " " + fuga.str2;
+		if (fuga != null) {
+			return str1 + " " + fuga.str2;
+		}
+		return str1 + " " + null;
 	}
 }
 
