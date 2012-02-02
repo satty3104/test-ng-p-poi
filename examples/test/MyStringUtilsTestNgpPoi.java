@@ -39,6 +39,7 @@ public class MyStringUtilsTestNgpPoi extends ExcelTestNgSupport {
 		// String expect = getString("expect");
 		// assertEquals(target.concat(str1, delim, str2), expect);
 
-		System.out.println(get("moge"));
+		Object o = get("moge");
+		System.out.println(o == null ? null : o);
 	}
 }

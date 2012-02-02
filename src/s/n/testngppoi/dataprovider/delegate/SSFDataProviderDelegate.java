@@ -1,6 +1,7 @@
 package s.n.testngppoi.dataprovider.delegate;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,19 +56,28 @@ public class SSFDataProviderDelegate {
 					+ row.getRowNum() + ".");
 		}
 		Map<String, Object> map = new HashMap<String, Object>();
-		for (int i = 0; i < maxColumn; i++) {
-			processCell(map, header.getCell(i), row.getCell(i));
+		try {
+			for (int i = 0; i < maxColumn; i++) {
+				processCell(map, header.getCell(i), row.getCell(i));
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		return map;
 	}
 
-	private void processCell(Map<String, Object> map, Cell headerCell, Cell cell) {
+	private void processCell(Map<String, Object> map, Cell headerCell, Cell cell)
+			throws Exception {
+
 		String headerValue = headerCell.getRichStringCellValue().getString();
 		String[] headerElements = headerValue.split(":", -1);
-		if (headerElements.length > 2) {
-			throw new TestNgpPoiException("");
-		}
-		if (headerElements.length == 1) {
+		switch (headerElements.length) {
+		case 0:
+			// String#split の仕様が変わらない限りここには入らないが･･･
+			throw new Exception(
+					"Illegal result of String#split. Result array's length must not be zero.");
+		case 1:
 			String key = headerElements[0];
 			if (map.containsKey(key)) {
 				// TODO キーが重複していたらログには出しておく
@@ -76,12 +86,20 @@ public class SSFDataProviderDelegate {
 			}
 			map.put(key, getValue(cell));
 			return;
+			// break;
+		case 2:
+			break;
+		default:
+			throw new TestNgpPoiException(
+					"There are too meny \":\" in header cell [" + headerValue
+							+ "].");
 		}
 
 		String className = headerElements[0];
 		String valiableName = headerElements[1];
 
-		String[] valiableNameElement = valiableName.split(".", -1);
+		String[] valiableNameElement = valiableName.split("\\.", -1);
+		print(Arrays.asList(valiableNameElement));
 		if (valiableNameElement.length == 0) {
 			throw new TestNgpPoiException("");
 		}
@@ -89,21 +107,10 @@ public class SSFDataProviderDelegate {
 			Class c = null;
 			Object o = null;
 			if (getValue(cell) != null) {
-				try {
-					c = Class.forName(className);
-					// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
-					// TODO 引数ありコンストラクタの場合？
-					o = c.newInstance();
-				} catch (ClassNotFoundException e) {
-					// TODO
-					e.printStackTrace();
-				} catch (InstantiationException e) {
-					// TODO
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					// TODO
-					e.printStackTrace();
-				}
+				c = Class.forName(className);
+				// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
+				// TODO 引数ありコンストラクタの場合？
+				o = c.newInstance();
 			}
 			map.put(valiableName, o);
 			return;
@@ -113,30 +120,15 @@ public class SSFDataProviderDelegate {
 		if (o2 == null) {
 			return;
 		}
-		try {
-			int len = valiableNameElement.length;
-			for (int i = 1; i < len; i++) {
-				Field f = o2.getClass()
-						.getDeclaredField(valiableNameElement[i]);
-				f.setAccessible(true);
-				if (i == len - 1) {
-					f.set(o2, getValue(cell));
-				} else {
-					o2 = f.get(o2);
-				}
+		int len = valiableNameElement.length;
+		for (int i = 1; i < len; i++) {
+			Field f = o2.getClass().getDeclaredField(valiableNameElement[i]);
+			f.setAccessible(true);
+			if (i == len - 1) {
+				f.set(o2, getValue(cell));
+			} else {
+				o2 = f.get(o2);
 			}
-		} catch (SecurityException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchFieldException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 
@@ -190,5 +182,9 @@ public class SSFDataProviderDelegate {
 
 	protected Object processBoolean(Cell cell) {
 		return Boolean.valueOf(cell.getBooleanCellValue());
+	}
+
+	private <T> void print(T t) {
+		System.out.println(t);
 	}
 }
