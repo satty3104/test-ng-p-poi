@@ -78,13 +78,7 @@ public class SSFDataProviderDelegate {
 			throw new Exception(
 					"Illegal result of String#split. Result array's length must not be zero.");
 		case 1:
-			String key = headerElements[0];
-			if (map.containsKey(key)) {
-				// TODO キーが重複していたらログには出しておく
-				System.out.println("Key in header cell is duplicated. [" + key
-						+ "]");
-			}
-			map.put(key, getValue(cell));
+			processCell(map, headerElements[0], cell);
 			return;
 			// break;
 		case 2:
@@ -96,14 +90,21 @@ public class SSFDataProviderDelegate {
 		}
 
 		String className = headerElements[0];
-		String valiableName = headerElements[1];
+		String key = headerElements[1];
 
-		String[] valiableNameElement = valiableName.split("\\.", -1);
-		print(Arrays.asList(valiableNameElement));
-		if (valiableNameElement.length == 0) {
-			throw new TestNgpPoiException("");
+		String[] keyElement = key.split("\\.", -1);
+		switch (keyElement.length) {
+		case 0:
+			// String#split の仕様が変わらない限りここには入らないが･･･
+			throw new TestNgpPoiException(
+					"Illegal result of String#split. Result array's length must not be zero.");
+		case 1:
+
+		default:
+			break;
 		}
-		if (valiableNameElement.length == 1) {
+
+		if (keyElement.length == 1) {
 			Class c = null;
 			Object o = null;
 			if (getValue(cell) != null) {
@@ -112,17 +113,17 @@ public class SSFDataProviderDelegate {
 				// TODO 引数ありコンストラクタの場合？
 				o = c.newInstance();
 			}
-			map.put(valiableName, o);
+			map.put(key, o);
 			return;
 		}
-		String s = valiableNameElement[0];
+		String s = keyElement[0];
 		Object o2 = map.get(s);
 		if (o2 == null) {
 			return;
 		}
-		int len = valiableNameElement.length;
+		int len = keyElement.length;
 		for (int i = 1; i < len; i++) {
-			Field f = o2.getClass().getDeclaredField(valiableNameElement[i]);
+			Field f = o2.getClass().getDeclaredField(keyElement[i]);
 			f.setAccessible(true);
 			if (i == len - 1) {
 				f.set(o2, getValue(cell));
@@ -130,6 +131,32 @@ public class SSFDataProviderDelegate {
 				o2 = f.get(o2);
 			}
 		}
+	}
+
+	private void processCell(Map<String, Object> map, String key, Cell cell) {
+
+		// .が含まれる処理をやる
+
+		if (map.containsKey(key)) {
+			// TODO キーが重複していたらログには出しておく
+			System.out.println("Key in header cell is duplicated. [" + key
+					+ "]");
+		}
+		map.put(key, getValue(cell));
+	}
+
+	public Object createInstance(Map<String, Object> map, String className,
+			Cell cell) throws ClassNotFoundException, InstantiationException,
+			IllegalAccessException {
+		Class<?> c = null;
+		Object o = null;
+		if (getValue(cell) != null) {
+			c = Class.forName(className);
+			// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
+			// TODO 引数ありコンストラクタの場合？
+			o = c.newInstance();
+		}
+		return o;
 	}
 
 	protected Object getValue(Cell cell) {
