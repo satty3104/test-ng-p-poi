@@ -4,13 +4,14 @@ import java.util.Iterator;
 
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.testng.Reporter;
 
-import s.n.testngppoi.dataprovider.delegate.SSFDataProviderDelegate;
+import s.n.testngppoi.dataprovider.delegate.SSFDataProviderRowDelegate;
 import s.n.testngppoi.exception.TestNgpPoiException;
 
 public class SSFDataProvider implements Iterator<Object[]> {
 
-	private SSFDataProviderDelegate delegate;
+	private SSFDataProviderRowDelegate delegate;
 
 	private Sheet sheet;
 
@@ -26,7 +27,7 @@ public class SSFDataProvider implements Iterator<Object[]> {
 					"There is no header row in the sheet ["
 							+ sheet.getSheetName() + "].");
 		}
-		delegate = new SSFDataProviderDelegate(header);
+		delegate = new SSFDataProviderRowDelegate(header);
 	}
 
 	@Override
@@ -37,14 +38,13 @@ public class SSFDataProvider implements Iterator<Object[]> {
 		}
 		if (rowNum == 1) {
 			// ヘッダ行しかなかった場合は成功にするがログには出しておく
-			System.out.println("There is no test in the sheet ["
+			Reporter.log("There is no test in the sheet ["
 					+ sheet.getSheetName() + "].");
 		}
 		if (rowNum != sheet.getLastRowNum() + 1) {
 			// 行数がおかしい（空行があるなどの）場合は成功にするがログには出しておく
-			System.out
-					.println("The number of tests run is not the same as the number of rows in the sheet ["
-							+ sheet.getSheetName() + "].");
+			Reporter.log("The number of tests run is not the same as the number of rows in the sheet ["
+					+ sheet.getSheetName() + "].");
 		}
 		return false;
 	}

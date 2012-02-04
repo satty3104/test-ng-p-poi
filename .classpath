@@ -4,20 +4,20 @@
 	<classpathentry kind="src" path="examples"/>
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre6"/>
+	<classpathentry kind="lib" path="lib/lib/asm-all-3.3.1.jar"/>
+	<classpathentry kind="lib" path="lib/lib/cofoja-1.0-r139.jar" sourcepath="lib/src/cofoja-1.0-r139-src.zip"/>
 	<classpathentry kind="lib" path="lib/lib/commons-logging-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/lib/dom4j-1.6.1.jar"/>
 	<classpathentry kind="lib" path="lib/lib/geronimo-stax-api_1.0_spec-1.0.jar"/>
-	<classpathentry kind="lib" path="lib/lib/jsonic-1.2.6.jar"/>
-	<classpathentry kind="lib" path="lib/lib/junit-3.8.2.jar"/>
-	<classpathentry kind="lib" path="lib/lib/junit-4.10.jar"/>
+	<classpathentry kind="lib" path="lib/lib/jsonic-1.2.6.jar" sourcepath="lib/src/jsonic-1.2.6-sources.jar"/>
+	<classpathentry kind="lib" path="lib/lib/junit-3.8.2.jar" sourcepath="lib/src/junit-3.8.2-src.jar"/>
+	<classpathentry kind="lib" path="lib/lib/junit-4.10.jar" sourcepath="lib/src/junit-4.10-src.jar"/>
 	<classpathentry kind="lib" path="lib/lib/log4j-1.2.13.jar"/>
-	<classpathentry kind="lib" path="lib/lib/poi-3.7-20101029.jar"/>
-	<classpathentry kind="lib" path="lib/lib/poi-ooxml-3.7-20101029.jar"/>
+	<classpathentry kind="lib" path="lib/lib/poi-3.7-20101029.jar" sourcepath="lib/src/poi-src-3.7-20101029.zip"/>
+	<classpathentry kind="lib" path="lib/lib/poi-ooxml-3.7-20101029.jar" sourcepath="lib/src/poi-src-3.7-20101029.zip"/>
 	<classpathentry kind="lib" path="lib/lib/poi-ooxml-schemas-3.7-20101029.jar"/>
-	<classpathentry kind="lib" path="lib/lib/poi-scratchpad-3.7-20101029.jar"/>
-	<classpathentry kind="lib" path="lib/lib/testng-6.2.jar"/>
+	<classpathentry kind="lib" path="lib/lib/poi-scratchpad-3.7-20101029.jar" sourcepath="lib/src/poi-src-3.7-20101029.zip"/>
+	<classpathentry kind="lib" path="lib/lib/testng-6.2.jar" sourcepath="lib/src/testng-6.2-src.zip"/>
 	<classpathentry kind="lib" path="lib/lib/xmlbeans-2.3.0.jar"/>
-	<classpathentry kind="lib" path="lib/lib/asm-all-3.3.1.jar"/>
-	<classpathentry kind="lib" path="lib/lib/cofoja-1.0-r139.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
