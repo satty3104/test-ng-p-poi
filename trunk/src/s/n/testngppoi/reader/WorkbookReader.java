@@ -10,6 +10,7 @@ import java.io.InputStream;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.testng.Reporter;
 
 import s.n.testngppoi.exception.TestNgpPoiException;
 import s.n.testngppoi.util.FileUtil;
@@ -46,8 +47,7 @@ public class WorkbookReader {
 		try {
 			c.close();
 		} catch (final IOException e) {
-			// TODO
-			System.out.println("Failed to close stream.");
+			Reporter.log("Failed to close stream.");
 		}
 	}
 }

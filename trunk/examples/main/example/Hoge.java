@@ -13,7 +13,3 @@ public class Hoge {
 		return str1 + " " + null;
 	}
 }
-
-class Fuga {
-	String str2;
-}
