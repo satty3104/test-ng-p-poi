@@ -2,7 +2,9 @@ package s.n.testngppoi.dataprovider.delegate;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -20,14 +22,18 @@ public class SSFDataProviderCellDelegate {
 	private static final Pattern ARRAY_PUTTERN = Pattern
 			.compile("^.+\\[\\d+\\]$");
 
-	SSFDataProviderCellDelegate(SSFDataProviderRowDelegate delegate) {
+	private static final String TYPE_VALUENAME_SEP = ":";
+
+	private static final String VALUENAME_SEP = "\\.";
+
+	public SSFDataProviderCellDelegate(SSFDataProviderRowDelegate delegate) {
 		this.delegate = delegate;
 		map = new HashMap<String, Object>();
 	}
 
 	public void processCell(Cell headerCell, Cell cell) throws Exception {
 		String headerValue = headerCell.getRichStringCellValue().getString();
-		String[] headerElements = headerValue.split(":", -1);
+		String[] headerElements = headerValue.split(TYPE_VALUENAME_SEP, -1);
 		switch (headerElements.length) {
 		case 0:
 			// String#split の仕様が変わらない限りここには入らないが･･･
@@ -49,15 +55,34 @@ public class SSFDataProviderCellDelegate {
 	private void processCellWithNoType(String valiableName, Cell cell)
 			throws SecurityException, IllegalArgumentException,
 			NoSuchFieldException, IllegalAccessException {
-		String[] valiableNameElement = valiableName.split("\\.", -1);
+		String[] valiableNameElement = valiableName.split(VALUENAME_SEP, -1);
 		switch (valiableNameElement.length) {
 		case 0:
 			// String#split の仕様が変わらない限りここには入らないが･･･
 			throw new TestNgpPoiException(
 					"Illegal result of String#split. Result array's length must not be zero.");
 		case 1:
-			// 単独で書いてあるものはそのまま Key-Value として入れる
-			put(valiableName, getValue(cell));
+			if (ARRAY_PUTTERN.matcher(valiableName).matches()) {
+				int open = valiableName.indexOf("[");
+				int close = valiableName.indexOf("]");
+				String parentName = valiableName.substring(0, open);
+				int index = Integer.valueOf(valiableName.substring(open + 1,
+						close));
+				Object o = map.get(parentName);
+				if (o == null) {
+					return;
+				}
+				if (o instanceof List) {
+					((List) o).add(index, getValue(cell));
+				} else if (o instanceof Set) {
+					((Set) o).add(getValue(cell));
+				} else {
+					// ここどうしようかな、、、
+				}
+			} else {
+				// 単独で書いてあるものはそのまま Key-Value として入れる
+				put(valiableName, getValue(cell));
+			}
 			break;
 		default:
 			processCellWithNoType(valiableNameElement, cell);
@@ -98,7 +123,7 @@ public class SSFDataProviderCellDelegate {
 			Cell cell) throws ClassNotFoundException, InstantiationException,
 			IllegalAccessException, SecurityException,
 			IllegalArgumentException, NoSuchFieldException {
-		String[] valiableNameElement = valiableName.split("\\.", -1);
+		String[] valiableNameElement = valiableName.split(VALUENAME_SEP, -1);
 		switch (valiableNameElement.length) {
 		case 0:
 			// String#split の仕様が変わらない限りここには入らないが･･･
@@ -221,5 +246,9 @@ public class SSFDataProviderCellDelegate {
 
 	public Map<String, Object> getMap() {
 		return map;
+	}
+
+	private void print(Object o) {
+		System.out.println(o);
 	}
 }
