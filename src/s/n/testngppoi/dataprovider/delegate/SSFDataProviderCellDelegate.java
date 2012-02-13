@@ -22,6 +22,9 @@ public class SSFDataProviderCellDelegate {
 	private static final Pattern ARRAY_PUTTERN = Pattern
 			.compile("^.+\\[\\d+\\]$");
 
+	private static final Pattern MAP_PUTTERN = Pattern
+			.compile("^.+\\{\\D+\\}$");
+
 	private static final String TYPE_VALUENAME_SEP = ":";
 
 	private static final String VALUENAME_SEP = "\\.";
@@ -79,6 +82,21 @@ public class SSFDataProviderCellDelegate {
 				} else {
 					// ここどうしようかな、、、
 				}
+			} else if (MAP_PUTTERN.matcher(valiableName).matches()) {
+				int open = valiableName.indexOf("{");
+				int close = valiableName.indexOf("}");
+				String parentName = valiableName.substring(0, open);
+				String keyName = valiableName.substring(open + 1, close);
+				Object m = map.get(parentName);
+				Object k = map.get(keyName);
+				if (m == null) {
+					return;
+				}
+				if (m instanceof Map) {
+					((Map) m).put(k, getValue(cell));
+				} else {
+					// ここどうしようかな、、、
+				}
 			} else {
 				// 単独で書いてあるものはそのまま Key-Value として入れる
 				put(valiableName, getValue(cell));
@@ -102,7 +120,61 @@ public class SSFDataProviderCellDelegate {
 		for (int i = 1; i <= len; i++) {
 			String fieldName = valiableNameElement[i];
 			if (ARRAY_PUTTERN.matcher(fieldName).matches()) {
-				// TODO 配列・リスト・セットだった時の処理を入れる
+				int open = fieldName.indexOf("[");
+				int close = fieldName.indexOf("]");
+				int index = Integer.valueOf(fieldName
+						.substring(open + 1, close));
+				fieldName = fieldName.substring(0, open);
+				Field f = o.getClass().getDeclaredField(fieldName);
+				f.setAccessible(true);
+				o = f.get(o);
+				if (o == null) {
+					// 親のオブジェクトをたどっていく途中で無かったら無視
+					return;
+				}
+				if (i == len) {
+					if (o instanceof List) {
+						((List) o).add(index, getValue(cell));
+					} else if (o instanceof Set) {
+						((Set) o).add(getValue(cell));
+					} else {
+						// ここどうしようかな、、、
+					}
+				} else {
+					if (o instanceof List) {
+						o = ((List) o).get(index);
+					} else if (o instanceof Set) {
+						// ここどうしようかな、、、
+					} else {
+						// ここどうしようかな、、、
+					}
+				}
+			} else if (MAP_PUTTERN.matcher(fieldName).matches()) {
+				int open = fieldName.indexOf("{");
+				int close = fieldName.indexOf("}");
+				String keyName = fieldName.substring(open + 1, close);
+				Object k = map.get(keyName);
+				fieldName = fieldName.substring(0, open);
+				Field f = o.getClass().getDeclaredField(fieldName);
+				f.setAccessible(true);
+				o = f.get(o);
+				// 親のオブジェクトをたどっていく途中で無かったら無視
+				if (o == null) {
+					return;
+				}
+				if (i == len) {
+					if (o instanceof Map) {
+						((Map) o).put(k, getValue(cell));
+					} else {
+						// ここどうしようかな、、、
+					}
+				} else {
+					if (o instanceof Map) {
+						o = ((Map) o).get(k);
+					} else {
+						// ここどうしようかな、、、
+					}
+				}
 			} else {
 				Field f = o.getClass().getDeclaredField(fieldName);
 				f.setAccessible(true);
@@ -179,6 +251,7 @@ public class SSFDataProviderCellDelegate {
 			// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
 			// TODO 引数ありコンストラクタの場合？
 			// TODO パッケージプライベートなクラスだったら？
+			// TODO 配列だったら？
 			o = c.newInstance();
 		}
 		return o;
