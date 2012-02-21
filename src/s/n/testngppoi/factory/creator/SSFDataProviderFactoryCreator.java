@@ -10,7 +10,7 @@ import s.n.testngppoi.type.Type;
 import s.n.testngppoi.util.FileUtil;
 
 /**
- * Spread Sheet Format (SSF) 形式のファイルからテストデータを作成するクラスの インスタンスを生成するクラス。
+ * Spread Sheet Format (SSF) 形式のファイルからテストデータを作成するクラスのインスタンスを生成するクラス。
  * 
  * @author s_nagai
  * @since 2012/01/23
@@ -85,7 +85,7 @@ public class SSFDataProviderFactoryCreator {
 
 	private File getFile(String filePath) {
 		File f = new File(filePath);
-		if (FileUtil.isValid(f) == false) {
+		if (FileUtil.isInvalid(f)) {
 			throw new TestNgpPoiException("The file [" + f.getAbsolutePath()
 					+ "] is not a file or can not read.");
 		}

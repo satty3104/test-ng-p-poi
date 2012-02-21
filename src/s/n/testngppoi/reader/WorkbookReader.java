@@ -36,11 +36,11 @@ public class WorkbookReader {
 			throw new TestNgpPoiException("I/O error occured. The file is ["
 					+ file.getAbsolutePath() + "].", e);
 		} finally {
-			close(is);
+			closeQuietly(is);
 		}
 	}
 
-	private void close(final Closeable c) {
+	private void closeQuietly(final Closeable c) {
 		if (c == null) {
 			return;
 		}

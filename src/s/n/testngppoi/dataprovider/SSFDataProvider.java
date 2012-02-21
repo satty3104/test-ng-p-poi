@@ -11,12 +11,13 @@ import s.n.testngppoi.exception.TestNgpPoiException;
 
 public class SSFDataProvider implements Iterator<Object[]> {
 
-	private SSFDataProviderRowDelegate delegate;
+	private SSFDataProviderRowDelegate delegatee;
 
 	private Sheet sheet;
 
 	public SSFDataProvider(Sheet sheet) {
 		if (sheet == null) {
+			// TODO
 			throw new NullPointerException("");
 		}
 		this.sheet = sheet;
@@ -27,12 +28,12 @@ public class SSFDataProvider implements Iterator<Object[]> {
 					"There is no header row in the sheet ["
 							+ sheet.getSheetName() + "].");
 		}
-		delegate = new SSFDataProviderRowDelegate(header);
+		delegatee = new SSFDataProviderRowDelegate(header);
 	}
 
 	@Override
 	public boolean hasNext() {
-		int rowNum = delegate.getRowNum();
+		int rowNum = delegatee.getRowNum();
 		if (sheet.getRow(rowNum) != null) {
 			return true;
 		}
@@ -51,14 +52,14 @@ public class SSFDataProvider implements Iterator<Object[]> {
 
 	@Override
 	public Object[] next() {
-		Object[] ret = processRow(sheet.getRow(delegate.getRowNum()));
+		Object[] ret = processRow(sheet.getRow(delegatee.getRowNum()));
 		// rowNumを加算するのは戻り値を返す直前にしないと、ログの数字がおかしくなる
-		delegate.addRowNum();
+		delegatee.addRowNum();
 		return ret;
 	}
 
 	private Object[] processRow(Row row) {
-		return new Object[] { delegate.getMap(row) };
+		return new Object[] { delegatee.getMap(row) };
 	}
 
 	@Override

@@ -13,51 +13,57 @@ import org.testng.Reporter;
 
 import s.n.testngppoi.exception.TestNgpPoiException;
 
+@SuppressWarnings({ "unchecked", "rawtypes" })
 public class SSFDataProviderCellDelegate {
 
-	private SSFDataProviderRowDelegate delegate;
+	private SSFDataProviderRowDelegate delegater;
 
 	private Map<String, Object> map;
 
 	private static final Pattern ARRAY_PUTTERN = Pattern
 			.compile("^.+\\[\\d+\\]$");
 
-	private static final Pattern MAP_PUTTERN = Pattern
-			.compile("^.+\\{\\D+\\}$");
+	private static final Pattern MAP_PUTTERN = Pattern.compile("^.+\\{.+\\}$");
 
 	private static final String TYPE_VALUENAME_SEP = ":";
 
 	private static final String VALUENAME_SEP = "\\.";
 
-	public SSFDataProviderCellDelegate(SSFDataProviderRowDelegate delegate) {
-		this.delegate = delegate;
+	public SSFDataProviderCellDelegate(SSFDataProviderRowDelegate delegater) {
+		this.delegater = delegater;
 		map = new HashMap<String, Object>();
 	}
 
 	public void processCell(Cell headerCell, Cell cell) throws Exception {
 		String headerValue = headerCell.getRichStringCellValue().getString();
 		String[] headerElements = headerValue.split(TYPE_VALUENAME_SEP, -1);
+		String className;
+		String valiableName;
 		switch (headerElements.length) {
 		case 0:
 			// String#split の仕様が変わらない限りここには入らないが･･･
 			throw new TestNgpPoiException(
 					"Illegal result of String#split. Result array's length must not be zero.");
 		case 1:
-			processCellWithNoType(headerElements[0], cell);
+			className = null;
+			valiableName = headerElements[0];
 			break;
 		case 2:
-			processCellWithType(headerElements[0], headerElements[1], cell);
+			className = headerElements[0];
+			valiableName = headerElements[1];
 			break;
 		default:
 			throw new TestNgpPoiException(
 					"There are too meny \":\" in header cell [" + headerValue
 							+ "].");
 		}
+		processCell(className, valiableName, cell);
 	}
 
-	private void processCellWithNoType(String valiableName, Cell cell)
-			throws SecurityException, IllegalArgumentException,
-			NoSuchFieldException, IllegalAccessException {
+	public void processCell(String className, String valiableName, Cell cell)
+			throws ClassNotFoundException, InstantiationException,
+			IllegalAccessException, SecurityException,
+			IllegalArgumentException, NoSuchFieldException {
 		String[] valiableNameElement = valiableName.split(VALUENAME_SEP, -1);
 		switch (valiableNameElement.length) {
 		case 0:
@@ -65,59 +71,65 @@ public class SSFDataProviderCellDelegate {
 			throw new TestNgpPoiException(
 					"Illegal result of String#split. Result array's length must not be zero.");
 		case 1:
-			if (ARRAY_PUTTERN.matcher(valiableName).matches()) {
-				int open = valiableName.indexOf("[");
-				int close = valiableName.indexOf("]");
-				String parentName = valiableName.substring(0, open);
-				int index = Integer.valueOf(valiableName.substring(open + 1,
-						close));
-				Object o = map.get(parentName);
-				if (o == null) {
-					return;
-				}
-				if (o instanceof List) {
-					((List) o).add(index, getValue(cell));
-				} else if (o instanceof Set) {
-					((Set) o).add(getValue(cell));
-				} else {
-					// ここどうしようかな、、、
-				}
-			} else if (MAP_PUTTERN.matcher(valiableName).matches()) {
-				int open = valiableName.indexOf("{");
-				int close = valiableName.indexOf("}");
-				String parentName = valiableName.substring(0, open);
-				String keyName = valiableName.substring(open + 1, close);
-				Object m = map.get(parentName);
-				Object k = map.get(keyName);
-				if (m == null) {
-					return;
-				}
-				if (m instanceof Map) {
-					((Map) m).put(k, getValue(cell));
-				} else {
-					// ここどうしようかな、、、
-				}
-			} else {
-				// 単独で書いてあるものはそのまま Key-Value として入れる
-				put(valiableName, getValue(cell));
-			}
+			processCellWithNoHierarchy(className, valiableName, cell);
 			break;
 		default:
-			processCellWithNoType(valiableNameElement, cell);
+			processCellWithHierarchy(className, valiableNameElement, cell);
 		}
 	}
 
-	private void processCellWithNoType(String[] valiableNameElement, Cell cell)
-			throws SecurityException, NoSuchFieldException,
-			IllegalArgumentException, IllegalAccessException {
+	private void processCellWithNoHierarchy(String className,
+			String valiableName, Cell cell) throws ClassNotFoundException,
+			InstantiationException, IllegalAccessException {
+		int open;
+		int close;
+		if (ARRAY_PUTTERN.matcher(valiableName).matches()) {
+			open = valiableName.indexOf("[");
+			close = valiableName.indexOf("]");
+		} else if (MAP_PUTTERN.matcher(valiableName).matches()) {
+			open = valiableName.indexOf("{");
+			close = valiableName.indexOf("}");
+		} else {
+			// ListでもMapでもなく単独で書いてあるものはそのまま Key-Value として入れる
+			put(valiableName, getValue(className, cell));
+			return;
+		}
+		Object o = map.get(valiableName.substring(0, open));
+		if (o == null) {
+			return;
+		}
+		if (o instanceof List) {
+			((List) o).add(
+					Integer.valueOf(valiableName.substring(open + 1, close)),
+					getValue(className, cell));
+			return;
+		}
+		if (o instanceof Set) {
+			((Set) o).add(getValue(className, cell));
+			return;
+		}
+		// TODO 配列の場合？
+		if (o instanceof Map) {
+			((Map) o).put(map.get(valiableName.substring(open + 1, close)),
+					getValue(className, cell));
+			return;
+		}
+		// ここどうしようかな、、、
+	}
+
+	private void processCellWithHierarchy(String className,
+			String[] valiableNameElement, Cell cell) throws SecurityException,
+			NoSuchFieldException, IllegalArgumentException,
+			IllegalAccessException, ClassNotFoundException,
+			InstantiationException {
 		String parentName = valiableNameElement[0];
 		Object o = map.get(parentName);
 		if (o == null) {
 			// 最も親のオブジェクトが無かったら無視
 			return;
 		}
-		int len = valiableNameElement.length - 1;
-		for (int i = 1; i <= len; i++) {
+		// TODO ここ再帰でいけるはず
+		for (int i = 1, len = valiableNameElement.length - 1; i <= len; i++) {
 			String fieldName = valiableNameElement[i];
 			if (ARRAY_PUTTERN.matcher(fieldName).matches()) {
 				int open = fieldName.indexOf("[");
@@ -134,9 +146,9 @@ public class SSFDataProviderCellDelegate {
 				}
 				if (i == len) {
 					if (o instanceof List) {
-						((List) o).add(index, getValue(cell));
+						((List) o).add(index, getValue(className, cell));
 					} else if (o instanceof Set) {
-						((Set) o).add(getValue(cell));
+						((Set) o).add(getValue(className, cell));
 					} else {
 						// ここどうしようかな、、、
 					}
@@ -152,8 +164,6 @@ public class SSFDataProviderCellDelegate {
 			} else if (MAP_PUTTERN.matcher(fieldName).matches()) {
 				int open = fieldName.indexOf("{");
 				int close = fieldName.indexOf("}");
-				String keyName = fieldName.substring(open + 1, close);
-				Object k = map.get(keyName);
 				fieldName = fieldName.substring(0, open);
 				Field f = o.getClass().getDeclaredField(fieldName);
 				f.setAccessible(true);
@@ -164,13 +174,16 @@ public class SSFDataProviderCellDelegate {
 				}
 				if (i == len) {
 					if (o instanceof Map) {
-						((Map) o).put(k, getValue(cell));
+						((Map) o).put(
+								map.get(fieldName.substring(open + 1, close)),
+								getValue(className, cell));
 					} else {
 						// ここどうしようかな、、、
 					}
 				} else {
 					if (o instanceof Map) {
-						o = ((Map) o).get(k);
+						o = ((Map) o).get(map.get(fieldName.substring(open + 1,
+								close)));
 					} else {
 						// ここどうしようかな、、、
 					}
@@ -179,7 +192,7 @@ public class SSFDataProviderCellDelegate {
 				Field f = o.getClass().getDeclaredField(fieldName);
 				f.setAccessible(true);
 				if (i == len) {
-					f.set(o, getValue(cell));
+					f.set(o, getValue(className, cell));
 				} else {
 					o = f.get(o);
 					if (o == null) {
@@ -191,54 +204,13 @@ public class SSFDataProviderCellDelegate {
 		}
 	}
 
-	private void processCellWithType(String className, String valiableName,
-			Cell cell) throws ClassNotFoundException, InstantiationException,
-			IllegalAccessException, SecurityException,
-			IllegalArgumentException, NoSuchFieldException {
-		String[] valiableNameElement = valiableName.split(VALUENAME_SEP, -1);
-		switch (valiableNameElement.length) {
-		case 0:
-			// String#split の仕様が変わらない限りここには入らないが･･･
-			throw new TestNgpPoiException(
-					"Illegal result of String#split. Result array's length must not be zero.");
-		case 1:
-			put(valiableName, createInstance(className, cell));
-			break;
-		default:
-			processCellWithType(className, valiableNameElement, cell);
+	protected Object getValue(String className, Cell cell)
+			throws ClassNotFoundException, InstantiationException,
+			IllegalAccessException {
+		if (className == null) {
+			return getCellValue(cell);
 		}
-	}
-
-	private void processCellWithType(String className,
-			String[] valiableNameElement, Cell cell) throws SecurityException,
-			NoSuchFieldException, IllegalArgumentException,
-			IllegalAccessException, ClassNotFoundException,
-			InstantiationException {
-		String parentName = valiableNameElement[0];
-		Object o = map.get(parentName);
-		if (o == null) {
-			// 最も親のオブジェクトが無かったら無視
-			return;
-		}
-		int len = valiableNameElement.length - 1;
-		for (int i = 1; i <= len; i++) {
-			String fieldName = valiableNameElement[i];
-			if (ARRAY_PUTTERN.matcher(fieldName).matches()) {
-				// TODO 配列・リスト・セットだった時の処理を入れる
-			} else {
-				Field f = o.getClass().getDeclaredField(fieldName);
-				f.setAccessible(true);
-				if (i == len) {
-					f.set(o, createInstance(className, cell));
-				} else {
-					o = f.get(o);
-					if (o == null) {
-						// 親のオブジェクトをたどっていく途中で無かったら無視
-						return;
-					}
-				}
-			}
-		}
+		return createInstance(className, cell);
 	}
 
 	private Object createInstance(String className, Cell cell)
@@ -246,7 +218,7 @@ public class SSFDataProviderCellDelegate {
 			IllegalAccessException {
 		Class<?> c = null;
 		Object o = null;
-		if (getValue(cell) != null) {
+		if (getCellValue(cell) != null) {
 			c = Class.forName(className);
 			// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
 			// TODO 引数ありコンストラクタの場合？
@@ -265,7 +237,7 @@ public class SSFDataProviderCellDelegate {
 		map.put(key, value);
 	}
 
-	protected Object getValue(Cell cell) {
+	protected Object getCellValue(Cell cell) {
 		if (cell == null) {
 			return processNull();
 		}
@@ -279,8 +251,8 @@ public class SSFDataProviderCellDelegate {
 		case Cell.CELL_TYPE_BOOLEAN:
 			return processBoolean(cell);
 		default:
-			System.out.println("There are invalid cell type in test No."
-					+ delegate.getRowNum() + ", so it replaced to null. "
+			Reporter.log("There are invalid cell type in test No."
+					+ delegater.getRowNum() + ", so it replaced to null. "
 					+ "Cell type must be string, numeric, date or boolean.");
 			return null;
 		}
