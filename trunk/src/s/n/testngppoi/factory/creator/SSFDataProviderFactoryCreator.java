@@ -22,7 +22,7 @@ public class SSFDataProviderFactoryCreator {
 	private Class<?> invoker;
 
 	public SSFDataProviderFactoryCreator() {
-		type = Type.XSSF;
+		init(Type.XSSF);
 	}
 
 	public SSFDataProviderFactoryCreator(Type type) {
@@ -30,13 +30,16 @@ public class SSFDataProviderFactoryCreator {
 			throw new TestNgpPoiException(
 					"The argument [type] must not be null.");
 		}
+		init(type);
+	}
+
+	private void init(Type type) {
 		this.type = type;
 	}
 
 	public SSFDataProviderFactory getFactory() {
-		invoker = getInvoker(new Throwable());
-		String fileName = invoker.getSimpleName() + getExtension();
-		return createFactory(getFilePath(fileName));
+		setInvoker(new Throwable());
+		return _getFactory(getFilePath(getFileName()));
 	}
 
 	public SSFDataProviderFactory getFactory(String fileName) {
@@ -44,26 +47,34 @@ public class SSFDataProviderFactoryCreator {
 			throw new TestNgpPoiException(
 					"The argument [fileName] must not be null.");
 		}
-		invoker = getInvoker(new Throwable());
-		return createFactory(getFilePath(fileName));
+		setInvoker(new Throwable());
+		return _getFactory(getFilePath(fileName));
 	}
 
 	public SSFDataProviderFactory getFactory(String dirPath, String fileName) {
-		return createFactory(dirPath + File.separator + fileName);
+		if (dirPath == null) {
+			throw new TestNgpPoiException(
+					"The argument [dirPath] must not be null.");
+		}
+		if (fileName == null) {
+			throw new TestNgpPoiException(
+					"The argument [fileName] must not be null.");
+		}
+		return _getFactory(getFilePath(dirPath, fileName));
 	}
 
-	private SSFDataProviderFactory createFactory(String filePath) {
+	private SSFDataProviderFactory _getFactory(String filePath) {
 		return new SSFDataProviderFactoryImpl(getFile(filePath));
 	}
 
-	private String getExtension() {
-		return type.getExtension();
+	private String getFileName() {
+		return invoker.getSimpleName() + type.getExtension();
 	}
 
-	private Class<?> getInvoker(Throwable t) {
+	private void setInvoker(Throwable t) {
 		StackTraceElement elem = t.getStackTrace()[1];
 		try {
-			return Class.forName(elem.getClassName());
+			invoker = Class.forName(elem.getClassName());
 		} catch (ClassNotFoundException e) {
 			throw new TestNgpPoiException("The caller class ["
 					+ elem.getClassName() + "] cannot be found.", e);
@@ -83,9 +94,13 @@ public class SSFDataProviderFactoryCreator {
 		return fileUrl.getPath();
 	}
 
+	private String getFilePath(String dirPath, String fileName) {
+		return dirPath + File.separator + fileName;
+	}
+
 	private File getFile(String filePath) {
 		File f = new File(filePath);
-		if (FileUtil.isInvalid(f)) {
+		if (FileUtil.isInvalidFile(f)) {
 			throw new TestNgpPoiException("The file [" + f.getAbsolutePath()
 					+ "] is not a file or can not read.");
 		}

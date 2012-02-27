@@ -13,4 +13,6 @@ public interface SSFDataProviderFactory {
 	public Iterator<Object[]> create();
 
 	public Iterator<Object[]> create(String sheetName);
+
+	public Iterator<Object[]> create(String sheetName, int headerRowNum);
 }

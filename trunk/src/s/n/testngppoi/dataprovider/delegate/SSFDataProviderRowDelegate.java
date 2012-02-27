@@ -10,7 +10,7 @@ import s.n.testngppoi.exception.TestNgpPoiException;
 
 public class SSFDataProviderRowDelegate {
 
-	private int rowNum = 1;
+	private int rowNum;
 
 	private Row header;
 
@@ -18,25 +18,29 @@ public class SSFDataProviderRowDelegate {
 
 	private SSFDataProviderCellDelegate delegatee;
 
-	public SSFDataProviderRowDelegate(Row header) {
+	public SSFDataProviderRowDelegate(Row header, int headerRowNum) {
 		this.header = header;
+		rowNum = headerRowNum + 1;
 		maxColumn = header.getLastCellNum();
 		checkHeaderCell();
 	}
 
 	private void checkHeaderCell() {
 		for (int i = 0; i < maxColumn; i++) {
-			Cell headerCell = header.getCell(i);
-			if (headerCell == null) {
-				// ヘッダが未入力の場合は失敗
-				throw new TestNgpPoiException(
-						"The cell with no value is found in the header row.");
-			}
-			if (headerCell.getCellType() != Cell.CELL_TYPE_STRING) {
-				// ヘッダのデータ型が文字列でない場合は失敗
-				throw new TestNgpPoiException(
-						"Header row's cell must be String type.");
-			}
+			checkHeaderCell(header.getCell(i));
+		}
+	}
+
+	private void checkHeaderCell(Cell headerCell) {
+		if (headerCell == null) {
+			// ヘッダが未入力の場合は失敗
+			throw new TestNgpPoiException(
+					"The cell with no value is found in the header row.");
+		}
+		if (headerCell.getCellType() != Cell.CELL_TYPE_STRING) {
+			// ヘッダのデータ型が文字列でない場合は失敗
+			throw new TestNgpPoiException(
+					"Header row's cell must be String type.");
 		}
 	}
 
@@ -65,5 +69,4 @@ public class SSFDataProviderRowDelegate {
 		}
 		return delegatee.getMap();
 	}
-
 }

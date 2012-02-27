@@ -18,7 +18,7 @@ import s.n.testngppoi.util.FileUtil;
 public class WorkbookReader {
 
 	public Workbook read(final File file) {
-		if (FileUtil.isInvalid(file)) {
+		if (FileUtil.isInvalidFile(file)) {
 			throw new TestNgpPoiException("The file [" + file.getAbsolutePath()
 					+ "] is invalid.");
 		}
@@ -47,7 +47,11 @@ public class WorkbookReader {
 		try {
 			c.close();
 		} catch (final IOException e) {
-			Reporter.log("Failed to close stream.");
+			failToClose();
 		}
+	}
+
+	private void failToClose() {
+		Reporter.log("Failed to close stream.");
 	}
 }
