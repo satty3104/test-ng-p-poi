@@ -21,16 +21,33 @@ public class SSFDataProviderFactoryImpl implements SSFDataProviderFactory {
 
 	@Override
 	public Iterator<Object[]> create() {
-		return create(new Throwable().getStackTrace()[1].getMethodName());
+		return create(getSheetName(new Throwable()));
 	}
 
 	@Override
 	public Iterator<Object[]> create(String sheetName) {
+		return create(sheetName, 1);
+	}
+
+	@Override
+	public Iterator<Object[]> create(String sheetName, int headerRowNum) {
 		if (sheetName == null) {
 			throw new TestNgpPoiException(
 					"The argument [sheetName] must not be null.");
 		}
-		return new SSFDataProvider(getSheet(sheetName));
+		if (headerRowNum <= 0) {
+			throw new TestNgpPoiException(
+					"The argument [headerRowNum] must not be lower than 0.");
+		}
+		return _create(sheetName, headerRowNum);
+	}
+
+	private SSFDataProvider _create(String sheetName, int headerRowNum) {
+		return new SSFDataProvider(getSheet(sheetName), headerRowNum);
+	}
+
+	private String getSheetName(Throwable t) {
+		return t.getStackTrace()[1].getMethodName();
 	}
 
 	private Sheet getSheet(String sheetName) {

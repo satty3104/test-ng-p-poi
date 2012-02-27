@@ -34,7 +34,7 @@ public class SSFDataProviderCellDelegate {
 		map = new HashMap<String, Object>();
 	}
 
-	public void processCell(Cell headerCell, Cell cell) throws Exception {
+	public void processCell(Cell headerCell, Cell valueCell) throws Exception {
 		String headerValue = headerCell.getRichStringCellValue().getString();
 		String[] headerElements = headerValue.split(TYPE_VALUENAME_SEP, -1);
 		String className;
@@ -57,12 +57,12 @@ public class SSFDataProviderCellDelegate {
 					"There are too meny \":\" in header cell [" + headerValue
 							+ "].");
 		}
-		processCell(className, valiableName, cell);
+		processCell(className, valiableName, valueCell);
 	}
 
-	public void processCell(String className, String valiableName, Cell cell)
-			throws ClassNotFoundException, InstantiationException,
-			IllegalAccessException, SecurityException,
+	public void processCell(String className, String valiableName,
+			Cell valueCell) throws ClassNotFoundException,
+			InstantiationException, IllegalAccessException, SecurityException,
 			IllegalArgumentException, NoSuchFieldException {
 		String[] valiableNameElement = valiableName.split(VALUENAME_SEP, -1);
 		switch (valiableNameElement.length) {
@@ -71,10 +71,10 @@ public class SSFDataProviderCellDelegate {
 			throw new TestNgpPoiException(
 					"Illegal result of String#split. Result array's length must not be zero.");
 		case 1:
-			processCellWithNoHierarchy(className, valiableName, cell);
+			processCellWithNoHierarchy(className, valiableName, valueCell);
 			break;
 		default:
-			processCellWithHierarchy(className, valiableNameElement, cell);
+			processCellWithHierarchy(className, valiableNameElement, valueCell);
 		}
 	}
 
@@ -83,10 +83,10 @@ public class SSFDataProviderCellDelegate {
 			InstantiationException, IllegalAccessException {
 		int open;
 		int close;
-		if (ARRAY_PUTTERN.matcher(valiableName).matches()) {
+		if (isArray(valiableName)) {
 			open = valiableName.indexOf("[");
 			close = valiableName.indexOf("]");
-		} else if (MAP_PUTTERN.matcher(valiableName).matches()) {
+		} else if (isMap(valiableName)) {
 			open = valiableName.indexOf("{");
 			close = valiableName.indexOf("}");
 		} else {
@@ -99,8 +99,7 @@ public class SSFDataProviderCellDelegate {
 			return;
 		}
 		if (o instanceof List) {
-			((List) o).add(
-					Integer.valueOf(valiableName.substring(open + 1, close)),
+			((List) o).add(getInt(valiableName.substring(open + 1, close)),
 					getValue(className, cell));
 			return;
 		}
@@ -122,86 +121,165 @@ public class SSFDataProviderCellDelegate {
 			NoSuchFieldException, IllegalArgumentException,
 			IllegalAccessException, ClassNotFoundException,
 			InstantiationException {
-		String parentName = valiableNameElement[0];
-		Object o = map.get(parentName);
-		if (o == null) {
-			// 最も親のオブジェクトが無かったら無視
-			return;
-		}
+		Object o = null;
 		// TODO ここ再帰でいけるはず
-		for (int i = 1, len = valiableNameElement.length - 1; i <= len; i++) {
-			String fieldName = valiableNameElement[i];
-			if (ARRAY_PUTTERN.matcher(fieldName).matches()) {
-				int open = fieldName.indexOf("[");
-				int close = fieldName.indexOf("]");
-				int index = Integer.valueOf(fieldName
-						.substring(open + 1, close));
-				fieldName = fieldName.substring(0, open);
-				Field f = o.getClass().getDeclaredField(fieldName);
-				f.setAccessible(true);
-				o = f.get(o);
-				if (o == null) {
-					// 親のオブジェクトをたどっていく途中で無かったら無視
-					return;
-				}
-				if (i == len) {
-					if (o instanceof List) {
-						((List) o).add(index, getValue(className, cell));
-					} else if (o instanceof Set) {
-						((Set) o).add(getValue(className, cell));
-					} else {
-						// ここどうしようかな、、、
+		for (int i = 0, len = valiableNameElement.length - 1; i <= len; i++) {
+			String valiableName = valiableNameElement[i];
+			int open;
+			int close;
+			String fieldName;
+			if (isArray(valiableName)) {
+				open = valiableName.indexOf("[");
+				close = valiableName.indexOf("]");
+				fieldName = valiableName.substring(0, open);
+			} else if (isMap(valiableName)) {
+				open = valiableName.indexOf("{");
+				close = valiableName.indexOf("}");
+				fieldName = valiableName.substring(0, open);
+			} else {
+				if (i == 0) {
+					o = map.get(valiableName);
+					if (o == null) {
+						// 最も親のオブジェクトが無かったら無視
+						return;
 					}
 				} else {
-					if (o instanceof List) {
-						o = ((List) o).get(index);
-					} else if (o instanceof Set) {
-						// ここどうしようかな、、、
+					Field f = o.getClass().getDeclaredField(valiableName);
+					f.setAccessible(true);
+					if (i == len) {
+						f.set(o, getValue(className, cell));
 					} else {
-						// ここどうしようかな、、、
+						o = f.get(o);
+						if (o == null) {
+							// 親のオブジェクトをたどっていく途中で無かったら無視
+							return;
+						}
 					}
 				}
-			} else if (MAP_PUTTERN.matcher(fieldName).matches()) {
-				int open = fieldName.indexOf("{");
-				int close = fieldName.indexOf("}");
-				fieldName = fieldName.substring(0, open);
-				Field f = o.getClass().getDeclaredField(fieldName);
-				f.setAccessible(true);
-				o = f.get(o);
-				// 親のオブジェクトをたどっていく途中で無かったら無視
-				if (o == null) {
-					return;
-				}
-				if (i == len) {
-					if (o instanceof Map) {
-						((Map) o).put(
-								map.get(fieldName.substring(open + 1, close)),
-								getValue(className, cell));
-					} else {
-						// ここどうしようかな、、、
-					}
-				} else {
-					if (o instanceof Map) {
-						o = ((Map) o).get(map.get(fieldName.substring(open + 1,
-								close)));
-					} else {
-						// ここどうしようかな、、、
-					}
-				}
+				return;
+			}
+			if (i == 0) {
+				o = map.get(fieldName);
 			} else {
 				Field f = o.getClass().getDeclaredField(fieldName);
+				f.setAccessible(true);
+				o = f.get(o);
+			}
+			if (o == null) {
+				// 親のオブジェクトをたどっていく途中で無かったら無視
+				return;
+			}
+			if (i == len) {
+				if (o instanceof List) {
+					((List) o).add(
+							getInt(valiableName.substring(open + 1, close)),
+							getValue(className, cell));
+				} else if (o instanceof Set) {
+					((Set) o).add(getValue(className, cell));
+				} else if (o instanceof Map) {
+					((Map) o).put(
+							map.get(valiableName.substring(open + 1, close)),
+							getValue(className, cell));
+				} else {
+					// ここどうしようかな、、、
+				}
+			} else {
+				if (o instanceof List) {
+					o = ((List) o).get(getInt(valiableName.substring(open + 1,
+							close)));
+				} else if (o instanceof Set) {
+					// ここどうしようかな、、、
+				} else if (o instanceof Map) {
+					o = ((Map) o).get(map.get(valiableName.substring(open + 1,
+							close)));
+				} else {
+					// ここどうしようかな、、、
+				}
+			}
+		}
+	}
+
+	private void _processCellWithHierarchy(String className, Object o,
+			String valiableName, Cell cell, int i, int len)
+			throws SecurityException, NoSuchFieldException,
+			IllegalArgumentException, IllegalAccessException,
+			ClassNotFoundException, InstantiationException {
+		int open;
+		int close;
+		String fieldName;
+		if (isArray(valiableName)) {
+			open = valiableName.indexOf("[");
+			close = valiableName.indexOf("]");
+			fieldName = valiableName.substring(0, open);
+		} else if (isMap(valiableName)) {
+			open = valiableName.indexOf("{");
+			close = valiableName.indexOf("}");
+			fieldName = valiableName.substring(0, open);
+		} else {
+			if (i == 0) {
+				o = map.get(valiableName);
+				if (o == null) {
+					// 最も親のオブジェクトが無かったら無視
+					return;
+				}
+			} else {
+				Field f = o.getClass().getDeclaredField(valiableName);
 				f.setAccessible(true);
 				if (i == len) {
 					f.set(o, getValue(className, cell));
 				} else {
-					o = f.get(o);
-					if (o == null) {
-						// 親のオブジェクトをたどっていく途中で無かったら無視
-						return;
-					}
+					_processCellWithHierarchy(className, f.get(o),
+							valiableName, cell, i++, len);
 				}
 			}
+			return;
 		}
+		if (i == 0) {
+			o = map.get(fieldName);
+		} else {
+			Field f = o.getClass().getDeclaredField(fieldName);
+			f.setAccessible(true);
+			o = f.get(o);
+		}
+		if (o == null) {
+			// 親のオブジェクトをたどっていく途中で無かったら無視
+			return;
+		}
+		if (i == len) {
+			if (o instanceof List) {
+				((List) o).add(getInt(valiableName.substring(open + 1, close)),
+						getValue(className, cell));
+				return;
+			}
+			if (o instanceof Set) {
+				((Set) o).add(getValue(className, cell));
+				return;
+			}
+			if (o instanceof Map) {
+				((Map) o).put(map.get(valiableName.substring(open + 1, close)),
+						getValue(className, cell));
+				return;
+			}
+			// ここどうしようかな、、、
+			return;
+		}
+		if (o instanceof List) {
+			_processCellWithHierarchy(className,
+					((List) o).get(getInt(valiableName.substring(open + 1,
+							close))), valiableName, cell, i++, len);
+			return;
+		}
+		if (o instanceof Set) {
+			// ここどうしようかな、、、
+			return;
+		}
+		if (o instanceof Map) {
+			_processCellWithHierarchy(className, ((Map) o).get(map
+					.get(valiableName.substring(open + 1, close))),
+					valiableName, cell, i++, len);
+			return;
+		}
+		// ここどうしようかな、、、
 	}
 
 	protected Object getValue(String className, Cell cell)
@@ -235,6 +313,18 @@ public class SSFDataProviderCellDelegate {
 			Reporter.log("Key [" + key + "] is duplicated.");
 		}
 		map.put(key, value);
+	}
+
+	private boolean isMap(String valiableName) {
+		return MAP_PUTTERN.matcher(valiableName).matches();
+	}
+
+	private boolean isArray(String valiableName) {
+		return ARRAY_PUTTERN.matcher(valiableName).matches();
+	}
+
+	private int getInt(String i) {
+		return Integer.valueOf(i);
 	}
 
 	protected Object getCellValue(Cell cell) {

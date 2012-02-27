@@ -1,6 +1,7 @@
 package s.n.testngppoi.dataprovider;
 
 import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -15,29 +16,62 @@ public class SSFDataProvider implements Iterator<Object[]> {
 
 	private Sheet sheet;
 
-	public SSFDataProvider(Sheet sheet) {
+	private int headerRowNum;
+
+	private boolean lastProcessed;
+
+	public SSFDataProvider(Sheet sheet, int headerRowNum) {
 		if (sheet == null) {
 			// TODO
 			throw new NullPointerException("");
 		}
+		if (headerRowNum <= 0) {
+			// TODO
+			throw new TestNgpPoiException("");
+		}
+		init(sheet, headerRowNum);
+	}
+
+	private void init(Sheet sheet, int headerRowNum) {
 		this.sheet = sheet;
-		Row header = sheet.getRow(0);
+		this.headerRowNum = headerRowNum - 1;
+		delegatee = createDelegatee(getHeader());
+	}
+
+	private Row getHeader() {
+		Row header = getRow(headerRowNum);
 		if (header == null) {
 			// ヘッダ行がない場合は失敗にする
 			throw new TestNgpPoiException(
 					"There is no header row in the sheet ["
 							+ sheet.getSheetName() + "].");
 		}
-		delegatee = new SSFDataProviderRowDelegate(header);
+		return header;
+	}
+
+	private SSFDataProviderRowDelegate createDelegatee(Row header) {
+		return new SSFDataProviderRowDelegate(header, headerRowNum);
 	}
 
 	@Override
 	public boolean hasNext() {
-		int rowNum = delegatee.getRowNum();
-		if (sheet.getRow(rowNum) != null) {
+		int rowNum = getRowNum();
+		if (getRow(rowNum) != null) {
 			return true;
 		}
-		if (rowNum == 1) {
+		processLast(rowNum);
+		return false;
+	}
+
+	private void processLast(int rowNum) {
+		if (lastProcessed) {
+			return;
+		}
+		lastProcessed = _processLast(rowNum);
+	}
+
+	private boolean _processLast(int rowNum) {
+		if (rowNum == headerRowNum + 1) {
 			// ヘッダ行しかなかった場合は成功にするがログには出しておく
 			Reporter.log("There is no test in the sheet ["
 					+ sheet.getSheetName() + "].");
@@ -47,19 +81,35 @@ public class SSFDataProvider implements Iterator<Object[]> {
 			Reporter.log("The number of tests run is not the same as the number of rows in the sheet ["
 					+ sheet.getSheetName() + "].");
 		}
-		return false;
+		return true;
 	}
 
 	@Override
 	public Object[] next() {
-		Object[] ret = processRow(sheet.getRow(delegatee.getRowNum()));
+		Object[] ret = processRow(getRow(getRowNum()));
 		// rowNumを加算するのは戻り値を返す直前にしないと、ログの数字がおかしくなる
-		delegatee.addRowNum();
+		addRowNum();
 		return ret;
 	}
 
 	private Object[] processRow(Row row) {
-		return new Object[] { delegatee.getMap(row) };
+		return new Object[] { getMap(row) };
+	}
+
+	private Row getRow(int idx) {
+		return sheet.getRow(idx);
+	}
+
+	private int getRowNum() {
+		return delegatee.getRowNum();
+	}
+
+	private void addRowNum() {
+		delegatee.addRowNum();
+	}
+
+	private Map<String, Object> getMap(Row row) {
+		return delegatee.getMap(row);
 	}
 
 	@Override
