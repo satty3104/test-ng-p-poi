@@ -25,7 +25,7 @@ public class SSFDataProviderFactoryCreator {
 		init(Type.XSSF);
 	}
 
-	public SSFDataProviderFactoryCreator(Type type) {
+	public SSFDataProviderFactoryCreator(final Type type) {
 		if (type == null) {
 			throw new TestNgpPoiException(
 					"The argument [type] must not be null.");
@@ -33,7 +33,7 @@ public class SSFDataProviderFactoryCreator {
 		init(type);
 	}
 
-	private void init(Type type) {
+	private void init(final Type type) {
 		this.type = type;
 	}
 

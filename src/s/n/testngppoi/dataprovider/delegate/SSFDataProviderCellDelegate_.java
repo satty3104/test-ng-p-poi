@@ -91,7 +91,7 @@ public class SSFDataProviderCellDelegate_ {
 			value = processMap((Map) o, valiableName, valueCell);
 		} else if (o.getClass().isArray()) {
 			// TODO 配列の場合
-			value = null;
+			value = o;
 		} else {
 			value = o;
 		}
@@ -108,12 +108,7 @@ public class SSFDataProviderCellDelegate_ {
 
 	private Collection processCollection(Collection c, String valiableName,
 			Cell valueCell) {
-		Object obj = getCellValue(valueCell);
-		if (obj instanceof String == false) {
-			// TODO
-			throw new TestNgpPoiException("");
-		}
-		String value = (String) obj;
+		String value = (String) processString(valueCell);
 		if (ARRAY_FORMAT.matcher(value).matches() == false) {
 			return null;
 		}
@@ -127,12 +122,7 @@ public class SSFDataProviderCellDelegate_ {
 	}
 
 	private Map processMap(Map _map, String valiableName, Cell valueCell) {
-		Object obj = getCellValue(valueCell);
-		if (obj instanceof String == false) {
-			// TODO
-			throw new TestNgpPoiException("");
-		}
-		String value = (String) obj;
+		String value = (String) processString(valueCell);
 		if (MAP_FORMAT.matcher(value).matches() == false) {
 			return null;
 		}
