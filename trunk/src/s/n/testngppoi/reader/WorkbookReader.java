@@ -40,7 +40,7 @@ public class WorkbookReader {
 		}
 	}
 
-	private void closeQuietly(final Closeable c) {
+	protected void closeQuietly(final Closeable c) {
 		if (c == null) {
 			return;
 		}
@@ -51,7 +51,7 @@ public class WorkbookReader {
 		}
 	}
 
-	private void failToClose() {
+	protected void failToClose() {
 		Reporter.log("Failed to close stream.");
 	}
 }
