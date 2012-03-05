@@ -1,6 +1,7 @@
 package s.n.testngppoi.dataprovider.delegate;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -23,11 +24,20 @@ public class SSFDataProviderCellDelegate_ {
 
 	private static final Pattern COLLECTION_ELEMENT_SEP = Pattern.compile(",");
 
+	private static final Pattern ARRAY_INDEX_SEP = Pattern.compile("][");
+
 	private static final Pattern MAP_ENTRY_SEP = Pattern.compile("=");
 
-	private static final Pattern ARRAY_FORMAT = Pattern.compile("^\\[.*\\]$");
+	private static final Pattern COLLECTION_FORMAT = Pattern
+			.compile("^\\[.*\\]$");
 
 	private static final Pattern MAP_FORMAT = Pattern.compile("^\\{.*\\}$");
+
+	private static final Pattern ARRAY_CLASS_FORMAT = Pattern
+			.compile("^.+(\\[\\d+\\])+$");
+
+	private static final Pattern CONSTRUCTER_FORMAT = Pattern
+			.compile("^.+\\(.+\\)$");
 
 	private SSFDataProviderRowDelegate delegater;
 
@@ -63,8 +73,7 @@ public class SSFDataProviderCellDelegate_ {
 	}
 
 	private void processCell(String className, String valiableName,
-			Cell valueCell) throws ClassNotFoundException,
-			InstantiationException, IllegalAccessException {
+			Cell valueCell) throws Exception {
 		String[] valiableNameElement = VALUENAME_SEP.split(valiableName, -1);
 		switch (valiableNameElement.length) {
 		case 0:
@@ -79,51 +88,48 @@ public class SSFDataProviderCellDelegate_ {
 	}
 
 	private void saiki1(String className, String valiableName, Cell valueCell)
-			throws ClassNotFoundException, InstantiationException,
-			IllegalAccessException {
+			throws Exception {
 		Object o = getValue(className, valueCell);
 		Object value;
 		if (o instanceof List) {
-			value = processList((List) o, valiableName, valueCell);
+			value = processList((List) o, valueCell);
 		} else if (o instanceof Set) {
-			value = processSet((Set) o, valiableName, valueCell);
+			value = processSet((Set) o, valueCell);
 		} else if (o instanceof Map) {
-			value = processMap((Map) o, valiableName, valueCell);
+			value = processMap((Map) o, valueCell);
 		} else if (o.getClass().isArray()) {
-			// TODO 配列の場合
-			value = o;
+			value = processArray((Object[]) o, valueCell);
 		} else {
 			value = o;
 		}
 		put(valiableName, value);
 	}
 
-	private List processList(List list, String valiableName, Cell valueCell) {
-		return (List) processCollection(list, valiableName, valueCell);
+	private List processList(List l, Cell valueCell) {
+		return (List) processCollection(l, valueCell);
 	}
 
-	private Set processSet(Set set, String valiableName, Cell valueCell) {
-		return (Set) processCollection(set, valiableName, valueCell);
+	private Set processSet(Set s, Cell valueCell) {
+		return (Set) processCollection(s, valueCell);
 	}
 
-	private Collection processCollection(Collection c, String valiableName,
-			Cell valueCell) {
+	private Collection processCollection(Collection c, Cell valueCell) {
 		String value = (String) processString(valueCell);
-		if (ARRAY_FORMAT.matcher(value).matches() == false) {
+		if (notMatches(COLLECTION_FORMAT, value)) {
 			return null;
 		}
 		String[] elements = COLLECTION_ELEMENT_SEP.split(
 				value.substring(1, value.length() - 1), -1);
 		for (String s : elements) {
 			// TODO NULLだったら？
-			c.add(map.get(s));
+			c.add(map.get(s.trim()));
 		}
 		return c;
 	}
 
-	private Map processMap(Map _map, String valiableName, Cell valueCell) {
+	private Map processMap(Map m, Cell valueCell) {
 		String value = (String) processString(valueCell);
-		if (MAP_FORMAT.matcher(value).matches() == false) {
+		if (notMatches(MAP_FORMAT, value)) {
 			return null;
 		}
 		String[] elements = COLLECTION_ELEMENT_SEP.split(
@@ -132,28 +138,37 @@ public class SSFDataProviderCellDelegate_ {
 			String[] el = MAP_ENTRY_SEP.split(entry, -1);
 			switch (el.length) {
 			// TODO NULLだったら？
-			case 1:
-				_map.put(map.get(el[0]), null);
-				break;
 			case 2:
-				_map.put(map.get(el[0]), map.get(el[1]));
+				m.put(map.get(el[0].trim()), map.get(el[1].trim()));
 				break;
 			default:
 				// TODO
 				throw new TestNgpPoiException("");
 			}
 		}
-		return _map;
+		return m;
 	}
 
-	private void saiki(String className, Object o, String valiableName,
-			Cell valueCell) {
-
+	private Object[] processArray(Object[] o, Cell valueCell) {
+		String value = (String) processString(valueCell);
+		if (notMatches(COLLECTION_FORMAT, value)) {
+			return null;
+		}
+		String[] elements = COLLECTION_ELEMENT_SEP.split(
+				value.substring(1, value.length() - 1), -1);
+		for (int i = 0; i < elements.length; i++) {
+			// TODO NULLだったら？
+			// TODO IndexOutOfBoundsException
+			o[i] = map.get(elements[i].trim());
+		}
+		return o;
 	}
 
-	private Object getValue(String className, Cell cell)
-			throws ClassNotFoundException, InstantiationException,
-			IllegalAccessException {
+	private void saiki(String className, String valiableName, Cell valueCell)
+			throws Exception {
+	}
+
+	private Object getValue(String className, Cell cell) throws Exception {
 		if (className == null) {
 			return getCellValue(cell);
 		}
@@ -162,15 +177,44 @@ public class SSFDataProviderCellDelegate_ {
 
 	private Object createInstance(String className, Cell cell)
 			throws ClassNotFoundException, InstantiationException,
-			IllegalAccessException {
-		Class<?> c = null;
+			IllegalAccessException, IllegalArgumentException,
+			SecurityException, InvocationTargetException, NoSuchMethodException {
+		if (getCellValue(cell) == null) {
+			return null;
+		}
 		Object o = null;
-		if (getCellValue(cell) != null) {
-			c = Class.forName(className);
-			// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
-			// TODO 引数ありコンストラクタの場合？
-			// TODO パッケージプライベートなクラスだったら？
-			// TODO 配列だったら？
+		// TODO Enum？
+		// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
+		// TODO パッケージプライベートなクラスだったら？
+		if (matches(ARRAY_CLASS_FORMAT, className)) {
+			int start = className.indexOf('[');
+			int end = className.length() - 1;
+			String[] dimensionsStrArray = ARRAY_INDEX_SEP.split(
+					className.substring(start, end), -1);
+			int len = dimensionsStrArray.length;
+			int[] dimensions = new int[len];
+			for (int i = 0; i < len; i++) {
+				dimensions[i] = Integer.parseInt(dimensionsStrArray[i].trim());
+			}
+			Class c = Class.forName(className.substring(0, start - 1));
+			o = Array.newInstance(c, dimensions);
+		} else if (CONSTRUCTER_FORMAT.matcher(className).matches()) {
+			int start = className.indexOf('(');
+			int end = className.length() - 1;
+			String[] argsStrArray = COLLECTION_ELEMENT_SEP.split(
+					className.substring(start, end), -1);
+			int len = argsStrArray.length;
+			Class[] types = new Class[len];
+			Object[] args = new Object[len];
+			for (int i = 0; i < len; i++) {
+				args[i] = map.get(argsStrArray[i].trim());
+				types[i] = args[i].getClass();
+			}
+			Class c = Class.forName(className.substring(0, start - 1));
+			o = c.getConstructor(types).newInstance(args);
+		} else {
+			Class c = Class.forName(className);
+			int mod = c.getModifiers();
 			o = c.newInstance();
 		}
 		return o;
@@ -239,6 +283,14 @@ public class SSFDataProviderCellDelegate_ {
 
 	public Map<String, Object> getMap() {
 		return map;
+	}
+
+	private boolean matches(Pattern p, String target) {
+		return p.matcher(target).matches();
+	}
+
+	private boolean notMatches(Pattern p, String target) {
+		return matches(p, target) == false;
 	}
 
 	private void print(Object o) {
