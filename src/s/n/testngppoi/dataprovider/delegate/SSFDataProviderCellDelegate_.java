@@ -1,6 +1,7 @@
 package s.n.testngppoi.dataprovider.delegate;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -24,7 +25,7 @@ public class SSFDataProviderCellDelegate_ {
 
 	private static final Pattern COLLECTION_ELEMENT_SEP = Pattern.compile(",");
 
-	private static final Pattern ARRAY_INDEX_SEP = Pattern.compile("][");
+	private static final Pattern ARRAY_INDEX_SEP = Pattern.compile("\\]\\[");
 
 	private static final Pattern MAP_ENTRY_SEP = Pattern.compile("=");
 
@@ -81,28 +82,58 @@ public class SSFDataProviderCellDelegate_ {
 			throw new TestNgpPoiException(
 					"Illegal result of String#split. Result array's length must not be zero.");
 		case 1:
-			saiki1(className, valiableName, valueCell);
+			processCellWithNoHierarchy(className, valiableName, valueCell);
 			break;
 		default:
+			processCellWithHierarchy(className, valiableNameElement, valueCell);
 		}
 	}
 
-	private void saiki1(String className, String valiableName, Cell valueCell)
-			throws Exception {
-		Object o = getValue(className, valueCell);
-		Object value;
-		if (o instanceof List) {
-			value = processList((List) o, valueCell);
-		} else if (o instanceof Set) {
-			value = processSet((Set) o, valueCell);
-		} else if (o instanceof Map) {
-			value = processMap((Map) o, valueCell);
-		} else if (o.getClass().isArray()) {
-			value = processArray((Object[]) o, valueCell);
-		} else {
-			value = o;
+	private void processCellWithNoHierarchy(String className,
+			String valiableName, Cell valueCell) throws Exception {
+		put(valiableName, getValue(className, valueCell));
+	}
+
+	private void processCellWithHierarchy(String className,
+			String[] valiableNameElement, Cell valueCell) throws Exception {
+		Object o = map.get(valiableNameElement[0]);
+		if (o == null) {
+			return;
 		}
-		put(valiableName, value);
+		for (int i = 1, len = valiableNameElement.length - 1; i <= len; i++) {
+			if (i == len) {
+				Object value = getValue(className, valueCell);
+				Field f = o.getClass().getDeclaredField(valiableNameElement[i]);
+				f.setAccessible(true);
+				f.set(o, value);
+			}
+			// TODO!!
+		}
+	}
+
+	private Object getValue(String className, Cell valueCell) throws Exception {
+		Object o;
+		if (className == null) {
+			o = getCellValue(valueCell);
+		} else {
+			o = createInstance(className, valueCell);
+		}
+		if (o == null) {
+			return o;
+		}
+		if (o instanceof List) {
+			return processList((List) o, valueCell);
+		}
+		if (o instanceof Set) {
+			return processSet((Set) o, valueCell);
+		}
+		if (o instanceof Map) {
+			return processMap((Map) o, valueCell);
+		}
+		if (o.getClass().isArray()) {
+			return processArray((Object[]) o, valueCell);
+		}
+		return o;
 	}
 
 	private List processList(List l, Cell valueCell) {
@@ -118,9 +149,11 @@ public class SSFDataProviderCellDelegate_ {
 		if (notMatches(COLLECTION_FORMAT, value)) {
 			return null;
 		}
-		String[] elements = COLLECTION_ELEMENT_SEP.split(
-				value.substring(1, value.length() - 1), -1);
-		for (String s : elements) {
+		String elements = value.substring(1, value.length() - 1).trim();
+		if (elements.length() == 0) {
+			return c;
+		}
+		for (String s : COLLECTION_ELEMENT_SEP.split(elements, -1)) {
 			// TODO NULLだったら？
 			c.add(map.get(s.trim()));
 		}
@@ -132,10 +165,12 @@ public class SSFDataProviderCellDelegate_ {
 		if (notMatches(MAP_FORMAT, value)) {
 			return null;
 		}
-		String[] elements = COLLECTION_ELEMENT_SEP.split(
-				value.substring(1, value.length() - 1), -1);
-		for (String entry : elements) {
-			String[] el = MAP_ENTRY_SEP.split(entry, -1);
+		String elements = value.substring(1, value.length() - 1).trim();
+		if (elements.length() == 0) {
+			return m;
+		}
+		for (String entry : COLLECTION_ELEMENT_SEP.split(elements, -1)) {
+			String[] el = MAP_ENTRY_SEP.split(entry.trim(), -1);
 			switch (el.length) {
 			// TODO NULLだったら？
 			case 2:
@@ -159,20 +194,10 @@ public class SSFDataProviderCellDelegate_ {
 		for (int i = 0; i < elements.length; i++) {
 			// TODO NULLだったら？
 			// TODO IndexOutOfBoundsException
+			// TODO ArrayStoreException
 			o[i] = map.get(elements[i].trim());
 		}
 		return o;
-	}
-
-	private void saiki(String className, String valiableName, Cell valueCell)
-			throws Exception {
-	}
-
-	private Object getValue(String className, Cell cell) throws Exception {
-		if (className == null) {
-			return getCellValue(cell);
-		}
-		return createInstance(className, cell);
 	}
 
 	private Object createInstance(String className, Cell cell)
@@ -190,19 +215,19 @@ public class SSFDataProviderCellDelegate_ {
 			int start = className.indexOf('[');
 			int end = className.length() - 1;
 			String[] dimensionsStrArray = ARRAY_INDEX_SEP.split(
-					className.substring(start, end), -1);
+					className.substring(start + 1, end), -1);
 			int len = dimensionsStrArray.length;
 			int[] dimensions = new int[len];
 			for (int i = 0; i < len; i++) {
 				dimensions[i] = Integer.parseInt(dimensionsStrArray[i].trim());
 			}
-			Class c = Class.forName(className.substring(0, start - 1));
+			Class c = Class.forName(className.substring(0, start));
 			o = Array.newInstance(c, dimensions);
 		} else if (CONSTRUCTER_FORMAT.matcher(className).matches()) {
 			int start = className.indexOf('(');
 			int end = className.length() - 1;
 			String[] argsStrArray = COLLECTION_ELEMENT_SEP.split(
-					className.substring(start, end), -1);
+					className.substring(start + 1, end), -1);
 			int len = argsStrArray.length;
 			Class[] types = new Class[len];
 			Object[] args = new Object[len];
@@ -210,11 +235,10 @@ public class SSFDataProviderCellDelegate_ {
 				args[i] = map.get(argsStrArray[i].trim());
 				types[i] = args[i].getClass();
 			}
-			Class c = Class.forName(className.substring(0, start - 1));
+			Class c = Class.forName(className.substring(0, start));
 			o = c.getConstructor(types).newInstance(args);
 		} else {
 			Class c = Class.forName(className);
-			int mod = c.getModifiers();
 			o = c.newInstance();
 		}
 		return o;

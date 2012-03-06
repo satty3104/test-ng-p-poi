@@ -1,5 +1,7 @@
 package s.n.testngppoi.support;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Map;
 
 public abstract class ExcelTestNgSupport {
@@ -30,6 +32,16 @@ public abstract class ExcelTestNgSupport {
 
 	public boolean getBoolean(String key) {
 		return castObject(get(key));
+	}
+
+	public Calendar getCalendar(String key) {
+		Date d = castObject(get(key));
+		if (d == null) {
+			return null;
+		}
+		Calendar c = Calendar.getInstance();
+		c.setTime(d);
+		return c;
 	}
 
 	public Object get(String key) {

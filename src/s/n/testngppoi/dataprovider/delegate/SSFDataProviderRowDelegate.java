@@ -16,7 +16,7 @@ public class SSFDataProviderRowDelegate {
 
 	private int maxColumn;
 
-	private SSFDataProviderCellDelegate delegatee;
+	private SSFDataProviderCellDelegate_ delegatee;
 
 	public SSFDataProviderRowDelegate(Row header, int headerRowNum) {
 		this.header = header;
@@ -58,7 +58,7 @@ public class SSFDataProviderRowDelegate {
 			Reporter.log("There are too many columns in test No." + getRowNum()
 					+ ".");
 		}
-		delegatee = new SSFDataProviderCellDelegate(this);
+		delegatee = new SSFDataProviderCellDelegate_(this);
 		try {
 			for (int i = 0; i < maxColumn; i++) {
 				delegatee.processCell(header.getCell(i), row.getCell(i));
