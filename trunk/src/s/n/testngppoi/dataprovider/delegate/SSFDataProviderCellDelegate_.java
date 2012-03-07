@@ -119,50 +119,65 @@ public class SSFDataProviderCellDelegate_ {
 		}
 	}
 
-	private void saiki(String className, String[] valiableNameElement,
-			Cell valueCell, int i, int len, Object o) throws Exception {
-		if (i == 0) {
-			o = map.get(valiableNameElement[i]);
-			if (o == null) {
-				return;
-			}
-			saiki(className, valiableNameElement, valueCell, ++i, len, o);
-			return;
-		}
-		if (i == len) {
-			Field f = o.getClass().getDeclaredField(valiableNameElement[i]);
+	private void saiki(ValiableNameElementIterator it, Object o)
+			throws Exception {
+		if (it.isFirst()) {
+			o = map.get(it.getName());
+		} else if (it.hasNext()) {
+			Field f = o.getClass().getDeclaredField(it.getName());
 			f.setAccessible(true);
-			f.set(o, getValue(className, valueCell));
+			o = f.get(o);
+		} else {
+			Field f = o.getClass().getDeclaredField(it.getName());
+			f.setAccessible(true);
+			f.set(o, getValue(it.className, it.valueCell));
 			return;
 		}
-		Field f = o.getClass().getDeclaredField(valiableNameElement[i]);
-		f.setAccessible(true);
-		saiki(className, valiableNameElement, valueCell, ++i, len, f.get(o));
+		if (o == null) {
+			return;
+		}
+		saiki(it.next(), o);
 	}
 
-	private static class valiableNameElementIterator implements Iterator {
+	private static class ValiableNameElementIterator implements
+			Iterator<ValiableNameElementIterator> {
 
 		int i;
 		int len;
 
-		public valiableNameElementIterator(String className,
+		String className;
+		String[] valiableNameElement;
+		Cell valueCell;
+
+		public ValiableNameElementIterator(String className,
 				String[] valiableNameElement, Cell valueCell) {
+			this.className = className;
+			this.valiableNameElement = valiableNameElement;
+			this.valueCell = valueCell;
 			len = valiableNameElement.length;
 		}
 
 		@Override
 		public boolean hasNext() {
-			return i == len;
+			return i != len;
 		}
 
 		@Override
-		public Object next() {
+		public ValiableNameElementIterator next() {
 			i++;
-			return null;
+			return this;
 		}
 
 		@Override
 		public void remove() {
+		}
+
+		public boolean isFirst() {
+			return i == 0;
+		}
+
+		public String getName() {
+			return valiableNameElement[i];
 		}
 	}
 
