@@ -17,3 +17,4 @@ public class Hoge {
 		return str1 + " " + null + " " + hogelist;
 	}
 }
+	
