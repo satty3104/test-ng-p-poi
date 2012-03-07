@@ -1,10 +1,12 @@
 package s.n.testngppoi.dataprovider.delegate;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,6 +17,7 @@ import org.apache.poi.ss.usermodel.DateUtil;
 import org.testng.Reporter;
 
 import s.n.testngppoi.exception.TestNgpPoiException;
+import s.n.testngppoi.util.StringUtil;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class SSFDataProviderCellDelegate_ {
@@ -55,13 +58,15 @@ public class SSFDataProviderCellDelegate_ {
 	}
 
 	private Header getHeader(Cell headerCell) {
-		String headerValue = headerCell.getRichStringCellValue().getString();
+		String headerValue = headerCell.getRichStringCellValue().getString()
+				.trim();
 		String[] headerElements = TYPE_VALUENAME_SEP.split(headerValue, -1);
 		switch (headerElements.length) {
 		case 1:
-			return new Header(null, headerElements[0]);
+			return new Header(null, headerElements[0].trim());
 		case 2:
-			return new Header(headerElements[0], headerElements[1]);
+			return new Header(headerElements[0].trim(),
+					headerElements[1].trim());
 		case 0:
 			// String#split の仕様が変わらない限りここには入らないが･･･
 			throw new TestNgpPoiException(
@@ -106,47 +111,160 @@ public class SSFDataProviderCellDelegate_ {
 				Field f = o.getClass().getDeclaredField(valiableNameElement[i]);
 				f.setAccessible(true);
 				f.set(o, value);
+				continue;
 			}
-			// TODO!!
+			Field f = o.getClass().getDeclaredField(valiableNameElement[i]);
+			f.setAccessible(true);
+			o = f.get(o);
 		}
+	}
+
+	private void saiki(String className, String[] valiableNameElement,
+			Cell valueCell, int i, int len, Object o) throws Exception {
+		if (i == 0) {
+			o = map.get(valiableNameElement[i]);
+			if (o == null) {
+				return;
+			}
+			saiki(className, valiableNameElement, valueCell, ++i, len, o);
+			return;
+		}
+		if (i == len) {
+			Field f = o.getClass().getDeclaredField(valiableNameElement[i]);
+			f.setAccessible(true);
+			f.set(o, getValue(className, valueCell));
+			return;
+		}
+		Field f = o.getClass().getDeclaredField(valiableNameElement[i]);
+		f.setAccessible(true);
+		saiki(className, valiableNameElement, valueCell, ++i, len, f.get(o));
+	}
+
+	private static class valiableNameElementIterator implements Iterator {
+
+		int i;
+		int len;
+
+		public valiableNameElementIterator(String className,
+				String[] valiableNameElement, Cell valueCell) {
+			len = valiableNameElement.length;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return i == len;
+		}
+
+		@Override
+		public Object next() {
+			i++;
+			return null;
+		}
+
+		@Override
+		public void remove() {
+		}
+	}
+
+	private void put(String key, Object value) {
+		if (map.containsKey(key)) {
+			// キーが重複していたらログには出しておく
+			Reporter.log("Key [" + key + "] is duplicated.");
+		}
+		map.put(key, value);
 	}
 
 	private Object getValue(String className, Cell valueCell) throws Exception {
 		Object o;
+		Object cellValue = getCellValue(valueCell);
 		if (className == null) {
-			o = getCellValue(valueCell);
+			// TODO 型が分かってる奴だったらよしなに入れる？
+			o = cellValue;
 		} else {
-			o = createInstance(className, valueCell);
+			o = createInstance(className, cellValue);
 		}
 		if (o == null) {
 			return o;
 		}
 		if (o instanceof List) {
-			return processList((List) o, valueCell);
+			return createList((List) o, valueCell);
 		}
 		if (o instanceof Set) {
-			return processSet((Set) o, valueCell);
+			return createSet((Set) o, valueCell);
 		}
 		if (o instanceof Map) {
-			return processMap((Map) o, valueCell);
+			return createMap((Map) o, valueCell);
 		}
 		if (o.getClass().isArray()) {
-			return processArray((Object[]) o, valueCell);
+			return createArray((Object[]) o, valueCell);
 		}
 		return o;
 	}
 
-	private List processList(List l, Cell valueCell) {
+	private Object getCellValue(Cell cell) {
+		if (cell == null) {
+			return processNull();
+		}
+		switch (cell.getCellType()) {
+		case Cell.CELL_TYPE_BLANK:
+			return processBlank(cell);
+		case Cell.CELL_TYPE_STRING:
+			return processString(cell);
+		case Cell.CELL_TYPE_NUMERIC:
+			return processNumeric(cell);
+		case Cell.CELL_TYPE_BOOLEAN:
+			return processBoolean(cell);
+		default:
+			Reporter.log("There are invalid cell type in test No."
+					+ delegater.getRowNum() + ", so it replaced to null. "
+					+ "Cell type must be string, numeric, date or boolean.");
+			return null;
+		}
+	}
+
+	private Object processNull() {
+		return null;
+	}
+
+	private Object processBlank(Cell cell) {
+		return null;
+	}
+
+	private Object processString(Cell cell) {
+		String cellValue = cell.getRichStringCellValue().getString();
+		if ("null".equals(cellValue)) {
+			return null;
+		}
+		if ("\"\"".equals(cellValue)) {
+			return "";
+		}
+		// TODO 他に特殊文字は？
+		return cell.getRichStringCellValue().getString()
+				.replaceAll("\\[TAB\\]", "\t");
+	}
+
+	private Object processNumeric(Cell cell) {
+		if (DateUtil.isCellDateFormatted(cell)) {
+			return cell.getDateCellValue();
+		}
+		return Double.valueOf(cell.getNumericCellValue());
+	}
+
+	private Object processBoolean(Cell cell) {
+		return Boolean.valueOf(cell.getBooleanCellValue());
+	}
+
+	private List createList(List l, Cell valueCell) {
 		return (List) processCollection(l, valueCell);
 	}
 
-	private Set processSet(Set s, Cell valueCell) {
+	private Set createSet(Set s, Cell valueCell) {
 		return (Set) processCollection(s, valueCell);
 	}
 
 	private Collection processCollection(Collection c, Cell valueCell) {
 		String value = (String) processString(valueCell);
-		if (notMatches(COLLECTION_FORMAT, value)) {
+		if (StringUtil.notMatches(COLLECTION_FORMAT, value)) {
 			return null;
 		}
 		String elements = value.substring(1, value.length() - 1).trim();
@@ -160,9 +278,9 @@ public class SSFDataProviderCellDelegate_ {
 		return c;
 	}
 
-	private Map processMap(Map m, Cell valueCell) {
+	private Map createMap(Map m, Cell valueCell) {
 		String value = (String) processString(valueCell);
-		if (notMatches(MAP_FORMAT, value)) {
+		if (StringUtil.notMatches(MAP_FORMAT, value)) {
 			return null;
 		}
 		String elements = value.substring(1, value.length() - 1).trim();
@@ -184,9 +302,9 @@ public class SSFDataProviderCellDelegate_ {
 		return m;
 	}
 
-	private Object[] processArray(Object[] o, Cell valueCell) {
+	private Object[] createArray(Object[] o, Cell valueCell) {
 		String value = (String) processString(valueCell);
-		if (notMatches(COLLECTION_FORMAT, value)) {
+		if (StringUtil.notMatches(COLLECTION_FORMAT, value)) {
 			return null;
 		}
 		String[] elements = COLLECTION_ELEMENT_SEP.split(
@@ -200,43 +318,21 @@ public class SSFDataProviderCellDelegate_ {
 		return o;
 	}
 
-	private Object createInstance(String className, Cell cell)
+	private Object createInstance(String className, Object cellValue)
 			throws ClassNotFoundException, InstantiationException,
 			IllegalAccessException, IllegalArgumentException,
 			SecurityException, InvocationTargetException, NoSuchMethodException {
-		if (getCellValue(cell) == null) {
+		if (cellValue == null) {
 			return null;
 		}
 		Object o = null;
 		// TODO Enum？
 		// TODO クラスの属性のチェック（interfaceだったらどうするか、とか）
 		// TODO パッケージプライベートなクラスだったら？
-		if (matches(ARRAY_CLASS_FORMAT, className)) {
-			int start = className.indexOf('[');
-			int end = className.length() - 1;
-			String[] dimensionsStrArray = ARRAY_INDEX_SEP.split(
-					className.substring(start + 1, end), -1);
-			int len = dimensionsStrArray.length;
-			int[] dimensions = new int[len];
-			for (int i = 0; i < len; i++) {
-				dimensions[i] = Integer.parseInt(dimensionsStrArray[i].trim());
-			}
-			Class c = Class.forName(className.substring(0, start));
-			o = Array.newInstance(c, dimensions);
-		} else if (CONSTRUCTER_FORMAT.matcher(className).matches()) {
-			int start = className.indexOf('(');
-			int end = className.length() - 1;
-			String[] argsStrArray = COLLECTION_ELEMENT_SEP.split(
-					className.substring(start + 1, end), -1);
-			int len = argsStrArray.length;
-			Class[] types = new Class[len];
-			Object[] args = new Object[len];
-			for (int i = 0; i < len; i++) {
-				args[i] = map.get(argsStrArray[i].trim());
-				types[i] = args[i].getClass();
-			}
-			Class c = Class.forName(className.substring(0, start));
-			o = c.getConstructor(types).newInstance(args);
+		if (StringUtil.matches(ARRAY_CLASS_FORMAT, className)) {
+			o = createArrayInstance(className);
+		} else if (StringUtil.matches(CONSTRUCTER_FORMAT, className)) {
+			o = createInstanceWithArgs(className);
 		} else {
 			Class c = Class.forName(className);
 			o = c.newInstance();
@@ -244,77 +340,91 @@ public class SSFDataProviderCellDelegate_ {
 		return o;
 	}
 
-	private void put(String key, Object value) {
-		if (map.containsKey(key)) {
-			// キーが重複していたらログには出しておく
-			Reporter.log("Key [" + key + "] is duplicated.");
+	private Object createArrayInstance(String className) {
+		int start = className.indexOf('[');
+		int end = className.length() - 1;
+		String dimensionsStr = className.substring(start + 1, end);
+		String[] dimensionsStrArray = ARRAY_INDEX_SEP.split(dimensionsStr, -1);
+		int len = dimensionsStrArray.length;
+		int[] dimensions = new int[len];
+		// "[" と "]" の間には正の数値しか入っていないことが前提（正規表現でチェックしているはず）
+		// "0001" とかいう文字列でも問題ないはず
+		for (int i = 0, dimension; i < len; i++) {
+			dimension = Integer.parseInt(dimensionsStrArray[i]);
+			if (dimension < 1) {
+				// TODO
+				throw new TestNgpPoiException("");
+			}
+			dimensions[i] = dimension;
 		}
-		map.put(key, value);
+		Class c = getClass(className.substring(0, start).trim());
+		return Array.newInstance(c, dimensions);
 	}
 
-	protected Object getCellValue(Cell cell) {
-		if (cell == null) {
-			return processNull();
+	private Object createInstanceWithArgs(String className) {
+		int start = className.indexOf('(');
+		int end = className.length() - 1;
+		String argsStr = className.substring(start + 1, end);
+		String[] argsStrArray = COLLECTION_ELEMENT_SEP.split(argsStr, -1);
+		int len = argsStrArray.length;
+		Class[] types = new Class[len];
+		Object[] args = new Object[len];
+		for (int i = 0; i < len; i++) {
+			args[i] = map.get(argsStrArray[i].trim());
+			types[i] = args[i].getClass();
 		}
-		switch (cell.getCellType()) {
-		case Cell.CELL_TYPE_BLANK:
-			return processBlank(cell);
-		case Cell.CELL_TYPE_STRING:
-			return processString(cell);
-		case Cell.CELL_TYPE_NUMERIC:
-			return processNumeric(cell);
-		case Cell.CELL_TYPE_BOOLEAN:
-			return processBoolean(cell);
-		default:
-			Reporter.log("There are invalid cell type in test No."
-					+ delegater.getRowNum() + ", so it replaced to null. "
-					+ "Cell type must be string, numeric, date or boolean.");
-			return null;
+		Class c = getClass(className.substring(0, start).trim());
+		Constructor con = getConstructor(c, types);
+		return createInstanceFromConstructor(con, args);
+	}
+
+	private Class getClass(String className) {
+		try {
+			return Class.forName(className);
+		} catch (ClassNotFoundException e) {
+			// TODO
+			throw new TestNgpPoiException("");
 		}
 	}
 
-	protected Object processNull() {
-		return null;
-	}
-
-	protected Object processBlank(Cell cell) {
-		return null;
-	}
-
-	protected Object processString(Cell cell) {
-		String cellValue = cell.getRichStringCellValue().getString();
-		if ("null".equals(cellValue)) {
-			return null;
+	private Constructor getConstructor(Class c, Class[] types) {
+		Constructor con = null;
+		try {
+			con = c.getDeclaredConstructor(types);
+			con.setAccessible(true);
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			throw new TestNgpPoiException("");
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			throw new TestNgpPoiException("");
+		} catch (NoSuchMethodException e) {
+			// TODO Auto-generated catch block
+			throw new TestNgpPoiException("");
 		}
-		if ("\"\"".equals(cellValue)) {
-			return "";
-		}
-		// TODO 他に特殊文字は？
-		return cell.getRichStringCellValue().getString()
-				.replaceAll("\\[TAB\\]", "\t");
+		return con;
 	}
 
-	protected Object processNumeric(Cell cell) {
-		if (DateUtil.isCellDateFormatted(cell)) {
-			return cell.getDateCellValue();
+	private Object createInstanceFromConstructor(Constructor con, Object[] args) {
+		try {
+			return con.newInstance(args);
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			throw new TestNgpPoiException("");
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			throw new TestNgpPoiException("");
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			throw new TestNgpPoiException("");
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			throw new TestNgpPoiException("");
 		}
-		return Double.valueOf(cell.getNumericCellValue());
-	}
-
-	protected Object processBoolean(Cell cell) {
-		return Boolean.valueOf(cell.getBooleanCellValue());
 	}
 
 	public Map<String, Object> getMap() {
 		return map;
-	}
-
-	private boolean matches(Pattern p, String target) {
-		return p.matcher(target).matches();
-	}
-
-	private boolean notMatches(Pattern p, String target) {
-		return matches(p, target) == false;
 	}
 
 	private void print(Object o) {
