@@ -16,7 +16,7 @@ public class SSFDataProviderRowDelegate {
 
 	private int maxColumn;
 
-	private SSFDataProviderCellDelegate_ delegatee;
+	private CellDelegate delegatee;
 
 	public SSFDataProviderRowDelegate(Row header, int headerRowNum) {
 		this.header = header;
@@ -53,12 +53,13 @@ public class SSFDataProviderRowDelegate {
 	}
 
 	public Map<String, Object> getMap(Row row) {
+		// TODO NULLチェック
 		if (row.getLastCellNum() > maxColumn) {
 			// カラムが多すぎる場合は失敗にしないがログには出しておく
 			Reporter.log("There are too many columns in test No." + getRowNum()
 					+ ".");
 		}
-		delegatee = new SSFDataProviderCellDelegate_(this);
+		delegatee = new SSFDataProviderCellDelegate(this);
 		try {
 			for (int i = 0; i < maxColumn; i++) {
 				delegatee.processCell(header.getCell(i), row.getCell(i));
