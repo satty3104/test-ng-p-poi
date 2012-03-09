@@ -12,7 +12,7 @@ import s.n.testngppoi.exception.TestNgpPoiException;
 
 public class SSFDataProvider implements Iterator<Object[]> {
 
-	private SSFDataProviderRowDelegate delegatee;
+	private SSFDataProviderRowDelegate delegate;
 
 	private Sheet sheet;
 
@@ -23,7 +23,7 @@ public class SSFDataProvider implements Iterator<Object[]> {
 	public SSFDataProvider(Sheet sheet, int headerRowNum) {
 		if (sheet == null) {
 			// TODO
-			throw new NullPointerException("");
+			throw new TestNgpPoiException("");
 		}
 		if (headerRowNum <= 0) {
 			// TODO
@@ -35,7 +35,7 @@ public class SSFDataProvider implements Iterator<Object[]> {
 	private void init(Sheet sheet, int headerRowNum) {
 		this.sheet = sheet;
 		this.headerRowNum = headerRowNum - 1;
-		delegatee = createDelegatee(getHeader());
+		delegate = createDelegatee(getHeader());
 	}
 
 	private Row getHeader() {
@@ -101,15 +101,15 @@ public class SSFDataProvider implements Iterator<Object[]> {
 	}
 
 	private int getRowNum() {
-		return delegatee.getRowNum();
+		return delegate.getRowNum();
 	}
 
 	private void addRowNum() {
-		delegatee.addRowNum();
+		delegate.addRowNum();
 	}
 
 	private Map<String, Object> getMap(Row row) {
-		return delegatee.getMap(row);
+		return delegate.getMap(row);
 	}
 
 	@Override

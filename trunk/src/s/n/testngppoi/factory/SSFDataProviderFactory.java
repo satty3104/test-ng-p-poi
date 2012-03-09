@@ -8,9 +8,7 @@ import java.util.Iterator;
  * @author s_nagai
  * @since 2012/01/23
  */
-public interface SSFDataProviderFactory {
-
-	public Iterator<Object[]> create();
+public interface SSFDataProviderFactory extends DataProviderFactory {
 
 	public Iterator<Object[]> create(String sheetName);
 
