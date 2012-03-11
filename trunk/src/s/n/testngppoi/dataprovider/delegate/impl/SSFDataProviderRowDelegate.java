@@ -1,14 +1,26 @@
-package s.n.testngppoi.dataprovider.delegate;
+package s.n.testngppoi.dataprovider.delegate.impl;
 
 import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
-import org.testng.Reporter;
 
+import s.n.testngppoi.dataprovider.delegate.CellDelegate;
+import s.n.testngppoi.dataprovider.delegate.RowDelegate;
 import s.n.testngppoi.exception.TestNgpPoiException;
+import s.n.testngppoi.service.LogService;
+import s.n.testngppoi.util.LogUtil;
 
-public class SSFDataProviderRowDelegate {
+/**
+ * Spread Sheet Format (SSF) 形式のファイルのセルに関する処理を行うクラス。
+ * 
+ * @author s_nagai
+ * @since 2012/02/04
+ */
+public class SSFDataProviderRowDelegate implements RowDelegate {
+
+	/** ログ出力を行うクラスのインスタンス */
+	private static final LogService log = LogUtil.getLogger();
 
 	private int rowNum;
 
@@ -44,19 +56,22 @@ public class SSFDataProviderRowDelegate {
 		}
 	}
 
+	@Override
 	public void addRowNum() {
 		rowNum++;
 	}
 
+	@Override
 	public int getRowNum() {
 		return rowNum;
 	}
 
+	@Override
 	public Map<String, Object> getMap(Row row) {
 		// TODO NULLチェック
 		if (row.getLastCellNum() > maxColumn) {
 			// カラムが多すぎる場合は失敗にしないがログには出しておく
-			Reporter.log("There are too many columns in test No." + getRowNum()
+			log.log("There are too many columns in test No." + getRowNum()
 					+ ".");
 		}
 		delegate = new SSFDataProviderCellDelegate(this);

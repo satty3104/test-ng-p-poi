@@ -3,13 +3,13 @@ package s.n.testngppoi.service.impl;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DateUtil;
 
-import s.n.testngppoi.exception.TestNgpPoiException;
+import s.n.testngppoi.exception.InvalidCellTypeException;
 import s.n.testngppoi.service.CellService;
 
 public class CellServiceImpl implements CellService {
 
 	@Override
-	public Object getCellValue(Cell cell) {
+	public Object getCellValue(final Cell cell) throws InvalidCellTypeException {
 		if (cell == null) {
 			return processNull();
 		}
@@ -23,10 +23,8 @@ public class CellServiceImpl implements CellService {
 		case Cell.CELL_TYPE_BOOLEAN:
 			return processBoolean(cell);
 		default:
-			throw new TestNgpPoiException();
-			// Reporter.log("There are invalid cell type in test No."
-			// + delegater.getRowNum() + ", so it replaced to null. "
-			// + "Cell type must be string, numeric, date or boolean.");
+			throw new InvalidCellTypeException("Invalid cell type. ["
+					+ cell.getCellType() + "]");
 		}
 	}
 
@@ -34,12 +32,12 @@ public class CellServiceImpl implements CellService {
 		return null;
 	}
 
-	protected Object processBlank(Cell cell) {
+	protected Object processBlank(final Cell cell) {
 		return null;
 	}
 
-	protected Object processString(Cell cell) {
-		String cellValue = cell.getRichStringCellValue().getString();
+	protected Object processString(final Cell cell) {
+		final String cellValue = cell.getRichStringCellValue().getString();
 		if ("null".equals(cellValue)) {
 			return null;
 		}
@@ -51,14 +49,14 @@ public class CellServiceImpl implements CellService {
 				.replaceAll("\\[TAB\\]", "\t");
 	}
 
-	protected Object processNumeric(Cell cell) {
+	protected Object processNumeric(final Cell cell) {
 		if (DateUtil.isCellDateFormatted(cell)) {
 			return cell.getDateCellValue();
 		}
 		return Double.valueOf(cell.getNumericCellValue());
 	}
 
-	protected Object processBoolean(Cell cell) {
+	protected Object processBoolean(final Cell cell) {
 		return Boolean.valueOf(cell.getBooleanCellValue());
 	}
 }

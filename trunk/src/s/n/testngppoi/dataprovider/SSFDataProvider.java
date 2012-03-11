@@ -5,14 +5,19 @@ import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.testng.Reporter;
 
-import s.n.testngppoi.dataprovider.delegate.SSFDataProviderRowDelegate;
+import s.n.testngppoi.dataprovider.delegate.RowDelegate;
+import s.n.testngppoi.dataprovider.delegate.impl.SSFDataProviderRowDelegate;
 import s.n.testngppoi.exception.TestNgpPoiException;
+import s.n.testngppoi.service.LogService;
+import s.n.testngppoi.util.LogUtil;
 
 public class SSFDataProvider implements Iterator<Object[]> {
 
-	private SSFDataProviderRowDelegate delegate;
+	/** ログ出力を行うクラスのインスタンス */
+	private static final LogService log = LogUtil.getLogger();
+
+	private RowDelegate delegate;
 
 	private Sheet sheet;
 
@@ -20,26 +25,27 @@ public class SSFDataProvider implements Iterator<Object[]> {
 
 	private boolean lastProcessed;
 
-	public SSFDataProvider(Sheet sheet, int headerRowNum) {
+	public SSFDataProvider(final Sheet sheet, final int headerRowNum) {
 		if (sheet == null) {
-			// TODO
-			throw new TestNgpPoiException("");
+			throw new TestNgpPoiException(
+					"The argument [sheet] must not be null.");
 		}
 		if (headerRowNum <= 0) {
-			// TODO
-			throw new TestNgpPoiException("");
+			throw new TestNgpPoiException(
+					"The argument [headerRowNum] must more than 0.");
 		}
 		init(sheet, headerRowNum);
 	}
 
-	private void init(Sheet sheet, int headerRowNum) {
+	private void init(final Sheet sheet, final int headerRowNum) {
 		this.sheet = sheet;
+		// 行は0始まりなので1引いておく
 		this.headerRowNum = headerRowNum - 1;
 		delegate = createDelegatee(getHeader());
 	}
 
 	private Row getHeader() {
-		Row header = getRow(headerRowNum);
+		final Row header = getRow(headerRowNum);
 		if (header == null) {
 			// ヘッダ行がない場合は失敗にする
 			throw new TestNgpPoiException(
@@ -49,13 +55,13 @@ public class SSFDataProvider implements Iterator<Object[]> {
 		return header;
 	}
 
-	private SSFDataProviderRowDelegate createDelegatee(Row header) {
+	private RowDelegate createDelegatee(final Row header) {
 		return new SSFDataProviderRowDelegate(header, headerRowNum);
 	}
 
 	@Override
 	public boolean hasNext() {
-		int rowNum = getRowNum();
+		final int rowNum = getRowNum();
 		if (getRow(rowNum) != null) {
 			return true;
 		}
@@ -63,22 +69,22 @@ public class SSFDataProvider implements Iterator<Object[]> {
 		return false;
 	}
 
-	private void processLast(int rowNum) {
+	private void processLast(final int rowNum) {
 		if (lastProcessed) {
 			return;
 		}
 		lastProcessed = _processLast(rowNum);
 	}
 
-	private boolean _processLast(int rowNum) {
+	private boolean _processLast(final int rowNum) {
 		if (rowNum == headerRowNum + 1) {
 			// ヘッダ行しかなかった場合は成功にするがログには出しておく
-			Reporter.log("There is no test in the sheet ["
-					+ sheet.getSheetName() + "].");
+			log.log("There is no test in the sheet [" + sheet.getSheetName()
+					+ "].");
 		}
 		if (rowNum != sheet.getLastRowNum() + 1) {
 			// 行数がおかしい（空行があるなどの）場合は成功にするがログには出しておく
-			Reporter.log("The number of tests run is not the same as the number of rows in the sheet ["
+			log.log("The number of tests run is not the same as the number of rows in the sheet ["
 					+ sheet.getSheetName() + "].");
 		}
 		return true;
@@ -86,17 +92,17 @@ public class SSFDataProvider implements Iterator<Object[]> {
 
 	@Override
 	public Object[] next() {
-		Object[] ret = processRow(getRow(getRowNum()));
+		final Object[] ret = processRow(getRow(getRowNum()));
 		// rowNumを加算するのは戻り値を返す直前にしないと、ログの数字がおかしくなる
 		addRowNum();
 		return ret;
 	}
 
-	private Object[] processRow(Row row) {
+	private Object[] processRow(final Row row) {
 		return new Object[] { getMap(row) };
 	}
 
-	private Row getRow(int idx) {
+	private Row getRow(final int idx) {
 		return sheet.getRow(idx);
 	}
 
@@ -108,7 +114,7 @@ public class SSFDataProvider implements Iterator<Object[]> {
 		delegate.addRowNum();
 	}
 
-	private Map<String, Object> getMap(Row row) {
+	private Map<String, Object> getMap(final Row row) {
 		return delegate.getMap(row);
 	}
 
