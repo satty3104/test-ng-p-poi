@@ -57,11 +57,11 @@ public class ClassUtil {
 		}
 	}
 
-	public static Field getAccessibleDeclaredField(String valiableName, Object o)
+	public static Field getAccessibleDeclaredField(String fieldName, Object o)
 			throws ClassUtilException {
 		Field f = null;
 		try {
-			f = o.getClass().getDeclaredField(valiableName);
+			f = o.getClass().getDeclaredField(fieldName);
 			f.setAccessible(true);
 		} catch (SecurityException e) {
 			// TODO Auto-generated catch block
