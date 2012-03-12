@@ -19,6 +19,18 @@ public class ClassUtil {
 		}
 	}
 
+	public static Object createInstance(Class c) throws ClassUtilException {
+		try {
+			return c.newInstance();
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			throw new ClassUtilException("");
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			throw new ClassUtilException("");
+		}
+	}
+
 	public static Constructor getAccessibleDeclaredConstructor(Class c,
 			Class[] types) throws ClassUtilException {
 		Constructor con = null;
