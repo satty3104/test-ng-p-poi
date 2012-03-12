@@ -98,7 +98,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 					"Illegal result of String#split. Result array's length must not be zero.");
 		default:
 			throw new TestNgpPoiException(
-					"There are too meny \":\" in header cell [" + headerValue
+					"There are too meny \":\"s in header cell [" + headerValue
 							+ "].");
 		}
 	}
@@ -112,8 +112,8 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			throw new TestNgpPoiException(
 					"Illegal result of String#split. Result array's length must not be zero.");
 		case 1:
-			processCellWithNoHierarchy(className, valiableNameHierarchy[0],
-					valueCell);
+			processCellWithNoHierarchy(className,
+					valiableNameHierarchy[0].trim(), valueCell);
 			break;
 		default:
 			processCellWithHierarchy(className, valiableNameHierarchy,
@@ -137,14 +137,14 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	private void processCellWithHierarchy(final String className,
 			final String[] hierarchy, final Cell valueCell)
 			throws ClassUtilException {
-		Object o = map.get(hierarchy[0]);
+		Object o = map.get(hierarchy[0].trim());
 		if (o == null) {
 			return;
 		}
 		final int len = hierarchy.length - 1;
 		Field f;
 		for (int i = 1; i <= len; i++) {
-			f = ClassUtil.getAccessibleDeclaredField(hierarchy[i], o);
+			f = ClassUtil.getAccessibleDeclaredField(hierarchy[i].trim(), o);
 			if (i != len) {
 				o = ClassUtil.getObject(o, f);
 				continue;
@@ -192,7 +192,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		return o;
 	}
 
-	private Object createInstance(String className, Object cellValue)
+	private Object createInstance(final String className, final Object cellValue)
 			throws ClassUtilException {
 		if (cellValue == null) {
 			return null;
@@ -211,63 +211,61 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		return o;
 	}
 
-	private Object createArrayInstance(String className)
+	private Object createArrayInstance(final String className)
 			throws ClassUtilException {
-		int start = className.indexOf('[');
-		int end = className.length() - 1;
-		String dimensionsStr = className.substring(start + 1, end);
-		String[] dimensionsStrArray = ARRAY_INDEX_SEP.split(dimensionsStr, -1);
-		int len = dimensionsStrArray.length;
-		int[] dimensions = new int[len];
-		// "[" と "]" の間には正の数値しか入っていないことが前提（正規表現でチェックしているはず）
-		// "0001" とかいう文字列でも問題ないはず
+		final int start = className.indexOf('[');
+		final int end = className.length() - 1;
+		final String dimensionsStr = className.substring(start + 1, end);
+		final String[] dimensionsStrArray = ARRAY_INDEX_SEP.split(
+				dimensionsStr, -1);
+		final int len = dimensionsStrArray.length;
+		final int[] dimensions = new int[len];
 		for (int i = 0, dimension; i < len; i++) {
+			// "[" と "]" の間には正の数値しか入っていないことが前提（正規表現でチェックしているはず）
+			// "0001" とかいう文字列でも問題ないはず
 			dimension = Integer.parseInt(dimensionsStrArray[i]);
 			if (dimension < 1) {
-				// TODO
-				throw new TestNgpPoiException("");
+				throw new TestNgpPoiException("Illegal value [" + dimension
+						+ "] is specified for dimension of Array.");
 			}
 			dimensions[i] = dimension;
 		}
-		Class c = ClassUtil.getClass(className.substring(0, start).trim());
+		final Class c = ClassUtil.getClass(className.substring(0, start));
 		return Array.newInstance(c, dimensions);
 	}
 
-	private Object createInstanceWithArgs(String className)
+	private Object createInstanceWithArgs(final String className)
 			throws ClassUtilException {
-		int start = className.indexOf('(');
-		int end = className.length() - 1;
-		String argsStr = className.substring(start + 1, end);
-		String[] argsStrArray = COLLECTION_ELEMENT_SEP.split(argsStr, -1);
-		int len = argsStrArray.length;
-		Class[] types = new Class[len];
-		Object[] args = new Object[len];
+		final int start = className.indexOf('(');
+		final int end = className.length() - 1;
+		final String argsStr = className.substring(start + 1, end);
+		final String[] argsStrArray = COLLECTION_ELEMENT_SEP.split(argsStr, -1);
+		final int len = argsStrArray.length;
+		final Class[] types = new Class[len];
+		final Object[] args = new Object[len];
 		for (int i = 0; i < len; i++) {
-			args[i] = map.get(argsStrArray[i].trim());
-			types[i] = args[i].getClass();
+			final Object arg = map.get(argsStrArray[i].trim());
+			args[i] = arg;
+			// TODO arg が null のときどうしよう・・・
+			types[i] = arg.getClass();
 		}
-		Class c = ClassUtil.getClass(className.substring(0, start).trim());
-		Constructor con = ClassUtil.getAccessibleDeclaredConstructor(c, types);
+		final Class c = ClassUtil.getClass(className.substring(0, start));
+		final Constructor con = ClassUtil.getAccessibleDeclaredConstructor(c,
+				types);
 		return ClassUtil.createInstanceFromConstructor(con, args);
 	}
 
-	private Object createInstance(String className) throws ClassUtilException {
+	private Object createInstance(final String className)
+			throws ClassUtilException {
 		final Class c = ClassUtil.getClass(className);
-		try {
-			return c.newInstance();
-		} catch (InstantiationException e) {
-			// TODO Auto-generated catch block
-			throw new TestNgpPoiException("");
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			throw new TestNgpPoiException("");
-		}
+		return ClassUtil.createInstance(c);
 	}
 
 	private List createList(final List l, final Object cellValue) {
 		if (cellValue instanceof String == false) {
 			throw new TestNgpPoiException(
-					"Cell value must be instance of String when create an instance of List.");
+					"Cell value must be instance of String when create an instance of List in test No."
+							+ delegater.getRowNum() + ".");
 		}
 		return (List) createCollection(l, cellValue);
 	}
@@ -275,7 +273,8 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	private Set createSet(final Set s, final Object cellValue) {
 		if (cellValue instanceof String == false) {
 			throw new TestNgpPoiException(
-					"Cell value must be instance of String when create an instance of Set.");
+					"Cell value must be instance of String when create an instance of Set in test No."
+							+ delegater.getRowNum() + ".");
 		}
 		return (Set) createCollection(s, cellValue);
 	}
@@ -291,7 +290,6 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			return c;
 		}
 		for (final String s : COLLECTION_ELEMENT_SEP.split(elements, -1)) {
-			// TODO NULLだったら？
 			c.add(map.get(s.trim()));
 		}
 		return c;
@@ -300,9 +298,10 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	private Map createMap(final Map m, final Object cellValue) {
 		if (cellValue instanceof String == false) {
 			throw new TestNgpPoiException(
-					"Cell value must be instance of String when create an instance of Map.");
+					"Cell value must be instance of String when create an instance of Map in test No."
+							+ delegater.getRowNum() + ".");
 		}
-		String value = (String) cellValue;
+		final String value = (String) cellValue;
 		if (StringUtil.notMatches(MAP_FORMAT, value)) {
 			return null;
 		}
@@ -313,13 +312,13 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		for (final String entry : COLLECTION_ELEMENT_SEP.split(elements, -1)) {
 			final String[] el = MAP_ENTRY_SEP.split(entry.trim(), -1);
 			switch (el.length) {
-			// TODO NULLだったら？
 			case 2:
 				m.put(map.get(el[0].trim()), map.get(el[1].trim()));
 				break;
 			default:
-				// TODO
-				throw new TestNgpPoiException("");
+				throw new TestNgpPoiException(
+						"There are too meny \"=\"s in cell value in test No."
+								+ delegater.getRowNum() + ".");
 			}
 		}
 		return m;
@@ -328,9 +327,10 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	private Object[] createArray(final Object[] o, final Object cellValue) {
 		if (cellValue instanceof String == false) {
 			throw new TestNgpPoiException(
-					"Cell value must be instance of String when create an instance of Array.");
+					"Cell value must be instance of String when create an instance of Array in test No."
+							+ delegater.getRowNum() + ".");
 		}
-		String value = (String) cellValue;
+		final String value = (String) cellValue;
 		if (StringUtil.notMatches(COLLECTION_FORMAT, value)) {
 			return null;
 		}
@@ -339,9 +339,13 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			return o;
 		}
 		final String[] elements = COLLECTION_ELEMENT_SEP.split(elementsStr, -1);
-		for (int i = 0; i < elements.length; i++) {
-			// TODO NULLだったら？
-			// TODO IndexOutOfBoundsException
+		final int len = elements.length;
+		if (len != o.length) {
+			throw new TestNgpPoiException(
+					"The number of elements in the cell is not equal to length of array in test No."
+							+ delegater.getRowNum() + ".");
+		}
+		for (int i = 0; i < len; i++) {
 			// TODO ArrayStoreException
 			o[i] = map.get(elements[i].trim());
 		}
@@ -353,15 +357,27 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		return map;
 	}
 
+	/**
+	 * ヘッダセルを表すクラス。
+	 * 
+	 * @author s_nagai
+	 * @since 2012/03/03
+	 */
 	private static class Header {
+
+		/** クラス名 */
 		String className;
+
+		/** 階層構造を持つ変数名 */
 		String[] valiableNameHierarchy;
 
 		/**
-		 * 引数に指定されたクラス名と変数名を使用してヘッダオブジェクトを生成します。
+		 * 引数に指定されたクラス名と変数名の配列を使用してヘッダオブジェクトを生成します。
 		 * 
 		 * @param className
-		 * @param valiableName
+		 *            クラス名
+		 * @param valiableNameHierarchy
+		 *            階層構造を持つ変数名
 		 */
 		Header(final String className, final String[] valiableNameHierarchy) {
 			this.className = className;
