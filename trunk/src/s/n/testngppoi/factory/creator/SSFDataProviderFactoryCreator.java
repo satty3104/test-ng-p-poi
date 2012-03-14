@@ -120,7 +120,7 @@ public class SSFDataProviderFactoryCreator {
 
 	/**
 	 * 呼び出し元クラス名とファイル形式からファイル名を作成します。<br>
-	 * ただし、{@code #invoker}と{@code #type}が{@code null}ではないことを前提とします。
+	 * ただし、{@code invoker}と{@code type}が{@code null}ではないことを前提とします。
 	 * 
 	 * @return ファイル名
 	 */

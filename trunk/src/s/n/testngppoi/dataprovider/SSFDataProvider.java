@@ -12,19 +12,37 @@ import s.n.testngppoi.exception.TestNgpPoiException;
 import s.n.testngppoi.service.LogService;
 import s.n.testngppoi.util.LogUtil;
 
+/**
+ * Spread Sheet Format (SSF) 形式のファイルから1行ごとにテストデータを作成して返却するクラス。
+ * 
+ * @author s_nagai
+ * @since 2012/01/22
+ */
 public class SSFDataProvider implements Iterator<Object[]> {
 
 	/** ログ出力を行うクラスのインスタンス */
 	private static final LogService log = LogUtil.getLogger();
 
+	/** 行に対する処理を行なうクラスのインスタンス */
 	private RowDelegate delegate;
 
+	/** 処理対象シート */
 	private Sheet sheet;
 
+	/** ヘッダ行番号 */
 	private int headerRowNum;
 
+	/** 1回でも終了処理が行なわれたか否か */
 	private boolean lastProcessed;
 
+	/**
+	 * 引数に指定されたシートとヘッダ行番号を用いて、新しい{@code SSFDataProvider}のインスタンスを作成します。
+	 * 
+	 * @param sheet
+	 *            シート
+	 * @param headerRowNum
+	 *            ヘッダ行番号
+	 */
 	public SSFDataProvider(final Sheet sheet, final int headerRowNum) {
 		if (sheet == null) {
 			throw new TestNgpPoiException(
@@ -37,13 +55,27 @@ public class SSFDataProvider implements Iterator<Object[]> {
 		init(sheet, headerRowNum);
 	}
 
+	/**
+	 * 引数に指定されたシートとヘッダ行番号を用いて、{@code SSFDataProvider}のインスタンスを初期化します。
+	 * 
+	 * @param sheet
+	 *            シート
+	 * @param headerRowNum
+	 *            ヘッダ行番号
+	 */
 	private void init(final Sheet sheet, final int headerRowNum) {
 		this.sheet = sheet;
 		// 行は0始まりなので1引いておく
 		this.headerRowNum = headerRowNum - 1;
-		delegate = createDelegatee(getHeader());
+		delegate = createDelegate(getHeader());
 	}
 
+	/**
+	 * 処理対象シートからヘッダ行オブジェクトを取得して返します。<br>
+	 * ヘッダ行オブジェクトが取得できなかった場合は{@link TestNgpPoiException}がスローされます。
+	 * 
+	 * @return ヘッダ行オブジェクト
+	 */
 	private Row getHeader() {
 		final Row header = getRow(headerRowNum);
 		if (header == null) {
@@ -55,7 +87,14 @@ public class SSFDataProvider implements Iterator<Object[]> {
 		return header;
 	}
 
-	private RowDelegate createDelegatee(final Row header) {
+	/**
+	 * ヘッダ行をもとに、行に対する処理を行なうクラスのインスタンスを生成します。
+	 * 
+	 * @param header
+	 *            ヘッダ行オブジェクト
+	 * @return 行に対する処理を行なうクラスのインスタンス
+	 */
+	private RowDelegate createDelegate(final Row header) {
 		return new SSFDataProviderRowDelegate(header, headerRowNum);
 	}
 
