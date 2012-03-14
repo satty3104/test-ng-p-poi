@@ -3,7 +3,7 @@ package s.n.testngppoi.factory;
 import java.util.Iterator;
 
 /**
- * Spread Sheet Format (SSF) 形式のファイルからテストデータを作成するクラス。
+ * Spread Sheet Format (SSF) 形式のファイルからテストデータを作成するクラスのインタフェース。
  * 
  * @author s_nagai
  * @since 2012/01/23

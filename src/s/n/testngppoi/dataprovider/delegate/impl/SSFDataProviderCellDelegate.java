@@ -63,10 +63,13 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 
 	private Map<String, Object> map;
 
+	private Map<String, Class> tmpMap;
+
 	public SSFDataProviderCellDelegate(final RowDelegate delegater) {
 		this.delegater = delegater;
 		cellService = new CellServiceImpl();
 		map = new HashMap<String, Object>();
+		tmpMap = new HashMap<String, Class>();
 	}
 
 	@Override
@@ -124,6 +127,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	private void processCellWithNoHierarchy(final String className,
 			final String key, final Cell valueCell) throws ClassUtilException {
 		put(key, getValue(className, valueCell));
+		putTmp(key, className);
 	}
 
 	private void put(final String key, final Object value) {
@@ -132,6 +136,24 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			log.log("Key [" + key + "] is duplicated.");
 		}
 		map.put(key, value);
+	}
+
+	private void putTmp(final String key, final String className)
+			throws ClassUtilException {
+		final Class value;
+		if (StringUtil.matches(ARRAY_CLASS_FORMAT, className)) {
+			// TODO [Ljava.lang.Object; こんな感じの文字列を作る
+			// http://java.sun.com/javase/ja/6/docs/ja/api/java/lang/Class.html#getName()
+			// この辺を参考に
+			value = ClassUtil.getClass(className.substring(0,
+					className.indexOf('[')));
+		} else if (StringUtil.matches(CONSTRUCTER_FORMAT, className)) {
+			value = ClassUtil.getClass(className.substring(0,
+					className.indexOf('(')));
+		} else {
+			value = ClassUtil.getClass(className);
+		}
+		tmpMap.put(key, value);
 	}
 
 	private void processCellWithHierarchy(final String className,
@@ -244,10 +266,14 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		final Class[] types = new Class[len];
 		final Object[] args = new Object[len];
 		for (int i = 0; i < len; i++) {
-			final Object arg = map.get(argsStrArray[i].trim());
+			final String key = argsStrArray[i].trim();
+			final Object arg = map.get(key);
 			args[i] = arg;
-			// TODO arg が null のときどうしよう・・・
-			types[i] = arg.getClass();
+			if (arg == null) {
+				types[i] = tmpMap.get(key);
+			} else {
+				types[i] = arg.getClass();
+			}
 		}
 		final Class c = ClassUtil.getClass(className.substring(0, start));
 		final Constructor con = ClassUtil.getAccessibleDeclaredConstructor(c,
