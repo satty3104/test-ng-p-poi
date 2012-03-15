@@ -3,6 +3,9 @@ package s.n.testngppoi.util;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import s.n.testngppoi.exception.ClassUtilException;
 
@@ -10,13 +13,41 @@ import s.n.testngppoi.exception.ClassUtilException;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class ClassUtil {
 
-	public static Class getClass(String className) throws ClassUtilException {
+	private static final Map<String, Class> PRIMITIVE_CLASS;
+
+	static {
+		final Map<String, Class> primitiveClass = new HashMap<String, Class>() {
+			private static final long serialVersionUID = -5552461840762896526L;
+			{
+				put("byte", byte.class);
+				put("short", short.class);
+				put("int", int.class);
+				put("long", long.class);
+				put("float", float.class);
+				put("double", double.class);
+				put("char", char.class);
+				put("boolean", boolean.class);
+			}
+		};
+		PRIMITIVE_CLASS = Collections.unmodifiableMap(primitiveClass);
+	}
+
+	public static Class getClass(final String className)
+			throws ClassUtilException {
+		final Class c = getPrimitiveClass(className);
+		if (c != null) {
+			return c;
+		}
 		try {
 			return Class.forName(className);
 		} catch (ClassNotFoundException e) {
 			// TODO
 			throw new ClassUtilException("");
 		}
+	}
+
+	private static Class getPrimitiveClass(final String className) {
+		return PRIMITIVE_CLASS.get(className);
 	}
 
 	public static Object createInstance(Class c) throws ClassUtilException {
