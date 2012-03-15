@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,7 +189,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 							+ "Cell type must be string, numeric, date or boolean.",
 					e);
 		}
-		// クラスが指定されていなかったらそのまま
+		// クラスが指定されていなかったらそのまま（Cellの型に依存する）
 		if (className == null) {
 			return cellValue;
 		}
@@ -196,6 +197,16 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		final Object o = createInstance(className, cellValue);
 		if (o == null) {
 			return o;
+		}
+		// 生成されたインスタンスがプリミティブ型の場合
+		if (o.getClass().isPrimitive()) {
+
+		}
+		if (o instanceof String) {
+
+		}
+		if (o instanceof Date) {
+
 		}
 		// インスタンスがコレクション系であれば中に値を詰める
 		if (o instanceof List) {
