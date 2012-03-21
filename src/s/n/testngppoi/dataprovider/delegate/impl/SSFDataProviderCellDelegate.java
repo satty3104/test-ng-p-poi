@@ -4,7 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collection;
-import java.util.Date;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +58,25 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	private static final Pattern CONSTRUCTER_FORMAT = Pattern
 			.compile("^.+\\(.+\\)$");
 
+	private static final Map<String, String> TYPE_ENCODING;
+
+	static {
+		final Map<String, String> typeEncoding = new HashMap<String, String>() {
+			private static final long serialVersionUID = -1214320567853917341L;
+			{
+				put("byte", "B");
+				put("short", "S");
+				put("int", "I");
+				put("long", "J");
+				put("float", "F");
+				put("double", "D");
+				put("char", "C");
+				put("boolean", "Z");
+			}
+		};
+		TYPE_ENCODING = Collections.unmodifiableMap(typeEncoding);
+	}
+
 	private CellService cellService;
 
 	private RowDelegate delegater;
@@ -85,6 +104,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	}
 
 	private Header getHeader(final Cell headerCell) {
+		// TODO ヘッダをキャッシュする
 		final String headerValue = headerCell.getRichStringCellValue()
 				.getString().trim();
 		String[] headerElements = TYPE_VALUENAME_SEP.split(headerValue, -1);
@@ -143,11 +163,21 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			throws ClassUtilException {
 		final Class value;
 		if (StringUtil.matches(ARRAY_CLASS_FORMAT, className)) {
-			// TODO [Ljava.lang.Object; こんな感じの文字列を作る
-			// http://java.sun.com/javase/ja/6/docs/ja/api/java/lang/Class.html#getName()
-			// この辺を参考に
-			value = ClassUtil.getClass(className.substring(0,
-					className.indexOf('[')));
+			final int start = className.indexOf('[');
+			final int end = className.length() - 1;
+			final String dimensionsStr = className.substring(start + 1, end);
+			final int len = ARRAY_INDEX_SEP.split(dimensionsStr, -1).length;
+			String name = "";
+			for (int i = 0; i < len; i++) {
+				name = "[" + name;
+			}
+			final Class c = ClassUtil.getClass(className.substring(0, start));
+			if (c.isPrimitive()) {
+				name = name + TYPE_ENCODING.get(c.getName());
+			} else {
+				name = name + "L" + c.getName() + ";";
+			}
+			value = ClassUtil.getClass(name);
 		} else if (StringUtil.matches(CONSTRUCTER_FORMAT, className)) {
 			value = ClassUtil.getClass(className.substring(0,
 					className.indexOf('(')));
@@ -197,16 +227,6 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		final Object o = createInstance(className, cellValue);
 		if (o == null) {
 			return o;
-		}
-		// 生成されたインスタンスがプリミティブ型の場合
-		if (o.getClass().isPrimitive()) {
-
-		}
-		if (o instanceof String) {
-
-		}
-		if (o instanceof Date) {
-
 		}
 		// インスタンスがコレクション系であれば中に値を詰める
 		if (o instanceof List) {
@@ -347,7 +367,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			return m;
 		}
 		for (final String entry : COLLECTION_ELEMENT_SEP.split(elements, -1)) {
-			final String[] el = MAP_ENTRY_SEP.split(entry.trim(), -1);
+			final String[] el = MAP_ENTRY_SEP.split(entry, -1);
 			switch (el.length) {
 			case 2:
 				m.put(map.get(el[0].trim()), map.get(el[1].trim()));
