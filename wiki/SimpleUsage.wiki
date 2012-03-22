@@ -1,0 +1,77 @@
+=TestNgpPoiの使い方=
+ここでは、サンプルコードを使用しながらTestNgpPoiの使い方を紹介します。
+==テスト対象クラス==
+{{{
+/**
+ * 文字列を操作するクラス。
+ */
+public class MyStringUtils {
+
+    /**
+     * 引数に指定した2つの文字列を、区切り文字を間にはさんで連結します。
+     * 
+     * @param str1 左側の文字列
+     * @param delim 区切り文字
+     * @param str2 右側の文字列
+     */
+    public String concat(String str1, String delim, String str2) {
+        if (str1 == null || str1.length() == 0) {
+            if (str2 == null || str2.length() == 0) {
+                return "";
+            }
+            return str2;
+        }
+        if (str2 == null || str2.length() == 0) {
+            return str1;
+        }
+        if (delim == null || delim.length() == 0) {
+            return str1 + str2;
+        }
+        return str1 + delim + str2;
+    }
+}
+}}}
+
+==テストデータを作成する==
+Excelファイルに以下のような網羅データを準備します。
+
+Excelを使用することにより、組み合わせテストの全テストパターンをより管理しやすくなります。
+
+Excelの書き方の詳細は[Excelの書き方 こちら]
+
+|| *No* || *expect* || *str1* || *delim* || *str2* ||
+|| 1 || "" || null || null || null ||
+|| 2 || "" || "" || null || null ||
+|| 3 || str1 || str1 || null || null ||
+|| 4 || "" || null || "" || null ||
+|| 5 || "" || "" || "" || null ||
+|| 6 || str1 || str1 || "" || null ||
+|| 7 || "" || null || : || null ||
+|| 8 || "" || "" || : || null ||
+|| 9 || str1 || str1 || : || null ||
+|| 10 || "" || null || null || "" ||
+|| 11 || "" || "" || null || "" ||
+|| 12 || str1 || str1 || null || "" ||
+|| 13 || "" || null || "" || "" ||
+|| 14 || "" || "" || "" || "" ||
+|| 15 || str1 || str1 || "" || "" ||
+|| 16 || "" || null || : || "" ||
+|| 17 || "" || "" || : || "" ||
+|| 18 || str1 || str1 || : || "" ||
+|| 19 || str2 || null || null || str2 ||
+|| 20 || str2 || "" || null || str2 ||
+|| 21 || str1str2 || str1 || null || str2 ||
+|| 22 || str2 || null || "" || str2 ||
+|| 23 || str2 || "" || "" || str2 ||
+|| 24 || str1str2 || str1 || "" || str2 ||
+|| 25 || str2 || null || : || str2 ||
+|| 26 || str2 || "" || : || str2 ||
+|| 27 || str1:str2 || str1 || : || str2 ||
+
+これを、以下に紹介するテストクラスの`class`ファイルと同じ場所に保存します。
+
+==テストクラス==
+{{{
+
+
+}}}
