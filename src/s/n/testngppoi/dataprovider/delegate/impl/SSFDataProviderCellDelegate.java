@@ -103,23 +103,30 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		}
 	}
 
+	/**
+	 * ヘッダセルの内容をヘッダオブジェクトに変換して返します。
+	 * 
+	 * @param headerCell
+	 *            ヘッダセル
+	 * @return ヘッダオブジェクト
+	 */
 	private Header getHeader(final Cell headerCell) {
 		// TODO ヘッダをキャッシュする
 		final String headerValue = headerCell.getRichStringCellValue()
 				.getString().trim();
-		String[] headerElements = TYPE_VALUENAME_SEP.split(headerValue, -1);
+		final String[] headerElements = split(TYPE_VALUENAME_SEP, headerValue);
 		final String[] valiableNameHierarchy;
 		switch (headerElements.length) {
 		case 1:
-			valiableNameHierarchy = VALUENAME_SEP.split(headerElements[0], -1);
+			valiableNameHierarchy = split(VALUENAME_SEP, headerElements[0]);
 			return new Header(null, valiableNameHierarchy);
 		case 2:
-			valiableNameHierarchy = VALUENAME_SEP.split(headerElements[1], -1);
+			valiableNameHierarchy = split(VALUENAME_SEP, headerElements[1]);
 			return new Header(headerElements[0].trim(), valiableNameHierarchy);
 		case 0:
-			// String#split の仕様が変わらない限りここには入らないが･･･
+			// Pattern#split の仕様が変わらない限りここには入らないが･･･
 			throw new TestNgpPoiException(
-					"Illegal result of String#split. Result array's length must not be zero.");
+					"Illegal result of Pattern#split. Result array's length must not be zero.");
 		default:
 			throw new TestNgpPoiException(
 					"There are too meny \":\"s in header cell [" + headerValue
@@ -132,9 +139,9 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			throws ClassUtilException {
 		switch (valiableNameHierarchy.length) {
 		case 0:
-			// String#split の仕様が変わらない限りここには入らないが･･･
+			// Pattern#split の仕様が変わらない限りここには入らないが･･･
 			throw new TestNgpPoiException(
-					"Illegal result of String#split. Result array's length must not be zero.");
+					"Illegal result of Pattern#split. Result array's length must not be zero.");
 		case 1:
 			processCellWithNoHierarchy(className,
 					valiableNameHierarchy[0].trim(), valueCell);
@@ -162,11 +169,18 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	private void putTmp(final String key, final String className)
 			throws ClassUtilException {
 		final Class value;
-		if (StringUtil.matches(ARRAY_CLASS_FORMAT, className)) {
+		if (className == null) {
+			Object tmp = map.get(key);
+			if (tmp != null) {
+				value = tmp.getClass();
+			} else {
+				value = null;
+			}
+		} else if (StringUtil.matches(ARRAY_CLASS_FORMAT, className)) {
 			final int start = className.indexOf('[');
 			final int end = className.length() - 1;
 			final String dimensionsStr = className.substring(start + 1, end);
-			final int len = ARRAY_INDEX_SEP.split(dimensionsStr, -1).length;
+			final int len = split(ARRAY_INDEX_SEP, dimensionsStr).length;
 			String name = "";
 			for (int i = 0; i < len; i++) {
 				name = "[" + name;
@@ -269,8 +283,8 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		final int start = className.indexOf('[');
 		final int end = className.length() - 1;
 		final String dimensionsStr = className.substring(start + 1, end);
-		final String[] dimensionsStrArray = ARRAY_INDEX_SEP.split(
-				dimensionsStr, -1);
+		final String[] dimensionsStrArray = split(ARRAY_INDEX_SEP,
+				dimensionsStr);
 		final int len = dimensionsStrArray.length;
 		final int[] dimensions = new int[len];
 		for (int i = 0, dimension; i < len; i++) {
@@ -292,7 +306,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		final int start = className.indexOf('(');
 		final int end = className.length() - 1;
 		final String argsStr = className.substring(start + 1, end);
-		final String[] argsStrArray = COLLECTION_ELEMENT_SEP.split(argsStr, -1);
+		final String[] argsStrArray = split(COLLECTION_ELEMENT_SEP, argsStr);
 		final int len = argsStrArray.length;
 		final Class[] types = new Class[len];
 		final Object[] args = new Object[len];
@@ -301,7 +315,12 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			final Object arg = map.get(key);
 			args[i] = arg;
 			if (arg == null) {
-				types[i] = tmpMap.get(key);
+				final Class tmp = tmpMap.get(key);
+				if (tmp == null) {
+					// TODO
+					throw new TestNgpPoiException();
+				}
+				types[i] = tmp;
 			} else {
 				types[i] = arg.getClass();
 			}
@@ -346,7 +365,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		if (elements.length() == 0) {
 			return c;
 		}
-		for (final String s : COLLECTION_ELEMENT_SEP.split(elements, -1)) {
+		for (final String s : split(COLLECTION_ELEMENT_SEP, elements)) {
 			c.add(map.get(s.trim()));
 		}
 		return c;
@@ -366,8 +385,8 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		if (elements.length() == 0) {
 			return m;
 		}
-		for (final String entry : COLLECTION_ELEMENT_SEP.split(elements, -1)) {
-			final String[] el = MAP_ENTRY_SEP.split(entry, -1);
+		for (final String entry : split(COLLECTION_ELEMENT_SEP, elements)) {
+			final String[] el = split(MAP_ENTRY_SEP, entry);
 			switch (el.length) {
 			case 2:
 				m.put(map.get(el[0].trim()), map.get(el[1].trim()));
@@ -395,7 +414,7 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 		if (elementsStr.length() == 0) {
 			return o;
 		}
-		final String[] elements = COLLECTION_ELEMENT_SEP.split(elementsStr, -1);
+		final String[] elements = split(COLLECTION_ELEMENT_SEP, elementsStr);
 		final int len = elements.length;
 		if (len != o.length) {
 			throw new TestNgpPoiException(
@@ -412,6 +431,10 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 	@Override
 	public Map<String, Object> getMap() {
 		return map;
+	}
+
+	private String[] split(final Pattern pattern, final String target) {
+		return pattern.split(target, -1);
 	}
 
 	/**
