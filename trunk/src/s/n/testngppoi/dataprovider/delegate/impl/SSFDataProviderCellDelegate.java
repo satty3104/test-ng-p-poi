@@ -170,10 +170,12 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			throws ClassUtilException {
 		final Class value;
 		if (className == null) {
-			Object tmp = map.get(key);
-			if (tmp != null) {
-				value = tmp.getClass();
+			Object o = map.get(key);
+			if (o != null) {
+				value = o.getClass();
 			} else {
+				// コンストラクタを使いたいときはclassNameを指定しないとダメにする
+				// valueをnullにしておいて、使うときにチェックする
 				value = null;
 			}
 		} else if (StringUtil.matches(ARRAY_CLASS_FORMAT, className)) {
@@ -214,9 +216,24 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 			f = ClassUtil.getAccessibleDeclaredField(hierarchy[i].trim(), o);
 			if (i != len) {
 				o = ClassUtil.getObject(o, f);
+				if (o == null) {
+					return;
+				}
 				continue;
 			}
-			ClassUtil.setValueToField(o, f, getValue(className, valueCell));
+			Object value = getValue(className, valueCell);
+			final Class type = f.getType();
+			if (type.isPrimitive()) {
+				// TODO fが数値でプリミティブだったらキャスト
+				if (type.equals(int.class)) {
+					ClassUtil
+							.setValueToField(o, f, ((Double) value).intValue());
+				} else {
+					ClassUtil.setValueToField(o, f, value);
+				}
+			} else {
+				ClassUtil.setValueToField(o, f, value);
+			}
 		}
 	}
 
@@ -323,6 +340,10 @@ public class SSFDataProviderCellDelegate implements CellDelegate {
 				types[i] = tmp;
 			} else {
 				types[i] = arg.getClass();
+			}
+			if (types[i] == null) {
+				// TODO
+				throw new TestNgpPoiException();
 			}
 		}
 		final Class c = ClassUtil.getClass(className.substring(0, start));
